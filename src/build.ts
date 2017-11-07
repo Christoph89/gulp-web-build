@@ -4,7 +4,6 @@ import * as deepAssign from "deep-assign";
 import * as empty from "gulp-empty";
 import * as rename from "gulp-rename";
 import * as sass from "gulp-sass";
-import * as javac from "gulp-javac";
 import * as uglify from "gulp-uglify";
 import * as uglifycss from "gulp-uglifycss";
 import * as typescript from "gulp-typescript";

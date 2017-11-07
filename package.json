@@ -1,15 +1,15 @@
 {
-  "name": "gulp-webbuild",
+  "name": "gulp-web-build",
   "version": "1.0.0",
   "description": "Util for building a web application with gulp",
   "main": "./bin/index.js",
-  "types": "./bin/index.d.ts",
+  "types": "./types/index.d.ts",
   "scripts": {
     "prepare": "gulp build"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Christoph89/gulp-webbuild.git"
+    "url": "git+https://github.com/Christoph89/gulp-web-build.git"
   },
   "keywords": [
     "gulp",
@@ -19,9 +19,9 @@
   "author": "chrike89",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/Christoph89/gulp-webbuild/issues"
+    "url": "https://github.com/Christoph89/gulp-web-build/issues"
   },
-  "homepage": "https://github.com/Christoph89/gulp-webbuild#readme",
+  "homepage": "https://github.com/Christoph89/gulp-web-build#readme",
   "dependencies": {
     "del": "^2.2.2",
     "linq": "^3.0.9",
@@ -38,7 +38,6 @@
     "gulp-rename": "^1.2.2",
     "gulp-sass": "^3.1.0",
     "gulp-typescript": "^3.2.2",
-    "gulp-javac": "^2.0.1",
     "gulp-uglify": "^2.0.1",
     "gulp-uglifycss": "^1.0.6",
     "gulp-sourcemaps": "^2.6.1",
