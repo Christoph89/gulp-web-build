@@ -1,0 +1,51 @@
+{
+  "name": "gulp-webbuild",
+  "version": "1.0.0",
+  "description": "Util for building a web application with gulp",
+  "main": "./bin/index.js",
+  "types": "./bin/index.d.ts",
+  "scripts": {
+    "prepare": "gulp build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Christoph89/gulp-webbuild.git"
+  },
+  "keywords": [
+    "gulp",
+    "web",
+    "build"
+  ],
+  "author": "chrike89",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Christoph89/gulp-webbuild/issues"
+  },
+  "homepage": "https://github.com/Christoph89/gulp-webbuild#readme",
+  "dependencies": {
+    "del": "^2.2.2",
+    "linq": "^3.0.9",
+    "ts-node": "^3.3.0",
+    "merge-stream": "^1.0.1",
+    "deep-assign": "^2.0.0",
+    "winston": "^2.4.0",
+    "typescript": "^2.6.1",
+    "gulp": "^3.9.1",
+    "gulp-changed": "^2.0.0",
+    "gulp-concat": "^2.6.1",
+    "gulp-empty": "^0.1.2",
+    "gulp-multi-dest": "^0.0.4",
+    "gulp-rename": "^1.2.2",
+    "gulp-sass": "^3.1.0",
+    "gulp-typescript": "^3.2.2",
+    "gulp-javac": "^2.0.1",
+    "gulp-uglify": "^2.0.1",
+    "gulp-uglifycss": "^1.0.6",
+    "gulp-sourcemaps": "^2.6.1",
+    "@types/node": "^8.0.47",
+    "@types/gulp": "^4.0.5",
+    "@types/merge-stream": "^1.0.28",
+    "@types/express": "^4.0.39",
+    "@types/winston": "^2.3.7"
+  }
+}
