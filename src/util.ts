@@ -184,10 +184,4 @@ export class BuildUtil
     log.verbose("copy "+JSON.stringify(source)+" -> "+JSON.stringify(destination));
     return mergeStream(GulpStream.src(this.cfg, source).dest(destination));
   }
-
-  /** Deep-merges the specified json objects. */
-  public static mergeJson(...objects: any[]): any
-  {
-    return deepAssign(...objects);
-  }
 }

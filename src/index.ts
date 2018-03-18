@@ -1,4 +1,5 @@
 import * as sh from "shelljs";
+import * as $linq from "linq";
 
 export { BuildConfig, MergedStream, JavacOptions, SourcemapOptions, GulpTask } from "./def"
 export { BuildUtil, log, task, runTask, registeredTasks, zip } from "./util";
@@ -9,3 +10,5 @@ export { VSCodeTask, VSCodeTaskPresentation, VSCodeDebugger } from "./vscode-sch
 export { Gulp as gulp } from "gulp";
 export var shell=sh;
 export var merge=require("deep-assign");
+export var linq=$linq;
+export var q=$linq.from;

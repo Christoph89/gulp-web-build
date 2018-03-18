@@ -3,7 +3,6 @@ exports.__esModule = true;
 var fs = require("fs");
 var linq = require("linq");
 var pathutil = require("path");
-var deepAssign = require("deep-assign");
 var winston = require("winston");
 var gulp = require("gulp");
 var gzip = require("gulp-zip");
@@ -146,14 +145,6 @@ var BuildUtil = /** @class */ (function () {
     BuildUtil.prototype.copy = function (source, destination) {
         exports.log.verbose("copy " + JSON.stringify(source) + " -> " + JSON.stringify(destination));
         return mergeStream(stream_1.GulpStream.src(this.cfg, source).dest(destination));
-    };
-    /** Deep-merges the specified json objects. */
-    BuildUtil.prototype.mergeJson = function () {
-        var objects = [];
-        for (var _i = 0; _i < arguments.length; _i++) {
-            objects[_i] = arguments[_i];
-        }
-        return deepAssign.apply(void 0, objects);
     };
     return BuildUtil;
 }());
