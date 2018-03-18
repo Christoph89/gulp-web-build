@@ -1,6 +1,6 @@
 {
   "name": "gulp-web-build",
-  "version": "2.2.2",
+  "version": "2.2.3",
   "description": "Util for building web applications.",
   "main": "./bin/js/index.js",
   "types": "./bin/dts/index.d.ts",

@@ -269,7 +269,7 @@ var Build = /** @class */ (function () {
     Build.prototype.mergeJson = function (content, vars) {
         util_1.log.verbose("merge json " + JSON.stringify(content) + "(vars " + JSON.stringify(vars) + ")");
         // get filename
-        var fileName = (typeof content.dest == "string") && pathutil.basename(pathutil.extname(content.dest) ? content.dest : content.src);
+        var fileName = pathutil.basename((typeof content.dest == "string") && pathutil.extname(content.dest) ? content.dest : content.src);
         // get result map
         if (typeof content.dest == "function") {
             var map = content.dest;
