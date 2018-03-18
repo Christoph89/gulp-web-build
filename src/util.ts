@@ -11,6 +11,7 @@ import * as shell from "shelljs";
 import * as stripJsonComments from "strip-json-comments";
 import { BuildConfig, GulpTask } from "./def";
 import { GulpStream } from "./stream";
+import { TaskFunction } from "undertaker";
 var mergeStream=require("merge-stream"); // merge-stream does not support ES6 import
 
 // log utils
@@ -27,10 +28,10 @@ export var log=new winston.Logger({
 
 // export gulp
 var tasks: GulpTask[]=[];
-export function task(name: string, fn: () => void);
-export function task (name: string, dependencies: string[], fn: () => void);
-export function task(t: GulpTask, fn: () => void);
-export function task(t: any, dependencies: any, fn?: () => void)
+export function task(name: string, fn: TaskFunction);
+export function task (name: string, dependencies: string[], fn: TaskFunction);
+export function task(t: GulpTask, fn: TaskFunction);
+export function task(t: any, dependencies: any, fn?: TaskFunction)
 {
   // get dependencies and task func
   if (!fn) 
@@ -51,10 +52,10 @@ export function task(t: any, dependencies: any, fn?: () => void)
   process.env.regtasks=JSON.stringify(tasks);
 
   // register gulp task.
-  return (<any>gulp).task(tn.name, tn.dependencies, function()
+  return (<any>gulp).task(tn.name, tn.dependencies, function(cb)
   {
     log.info("[TASK "+tn.name.toUpperCase()+"]");
-    return fn();
+    return fn(cb);
   });
 };
 

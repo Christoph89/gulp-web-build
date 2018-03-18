@@ -39,9 +39,9 @@ function task(t, dependencies, fn) {
     tasks.push(tn);
     process.env.regtasks = JSON.stringify(tasks);
     // register gulp task.
-    return gulp.task(tn.name, tn.dependencies, function () {
+    return gulp.task(tn.name, tn.dependencies, function (cb) {
         exports.log.info("[TASK " + tn.name.toUpperCase() + "]");
-        return fn();
+        return fn(cb);
     });
 }
 exports.task = task;
