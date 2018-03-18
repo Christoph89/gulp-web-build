@@ -271,7 +271,6 @@ var Build = /** @class */ (function () {
         // get filename
         var fileName = (typeof content.dest == "string") && pathutil.basename(pathutil.extname(content.dest) ? content.dest : content.src);
         // get result map
-        console.log("aaaa" + content.dest);
         if (typeof content.dest == "function") {
             var map = content.dest;
             content.dest = function (file, done) {
