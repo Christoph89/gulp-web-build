@@ -40,4 +40,6 @@ export declare class BuildUtil {
     contentSrc(content: any): GulpStream;
     /** Copies the specified source(s) to the specified desination(s). */
     copy(source: string | string[], destination: string | string[]): any;
+    /** Deep-merges the specified json objects. */
+    mergeJson(...objects: any[]): any;
 }
