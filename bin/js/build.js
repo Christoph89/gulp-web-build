@@ -13,12 +13,15 @@ var uglifycss = require("gulp-uglifycss");
 var typescript = require("gulp-typescript");
 var sourcemaps = require("gulp-sourcemaps");
 var jmerge = require("gulp-merge-json");
+var tplrender = require("gulp-nunjucks-render");
+var tpldata = require("gulp-data");
 var util_1 = require("./util");
 var mergeStream = require("merge-stream"); // merge-stream does not support ES6 import
 /** Class for building web applications. */
 var Build = /** @class */ (function () {
     function Build(cfg) {
         this.staticContent = [];
+        this.tplContent = [];
         this.jsonContent = [];
         this.tsContent = [];
         this.scssContent = [];
@@ -49,6 +52,16 @@ var Build = /** @class */ (function () {
     /** Adds content statically for copying without any building/parsing/etc. */
     Build.prototype.add = function (src, dest) {
         this.staticContent.push({ src: src, dest: dest });
+        return this;
+    };
+    /** Adds the specified template content. */
+    Build.prototype.addTpl = function (src, path, dest, data) {
+        this.tplContent.push({
+            src: src,
+            dest: dest,
+            path: path,
+            data: data
+        });
         return this;
     };
     /** Adds json content.
@@ -133,6 +146,11 @@ var Build = /** @class */ (function () {
             util_1.log.info("copy static content");
             linq.from(this.staticContent).forEach(function (x) { return _this.copyStatic(x); });
         }
+        // render templates
+        if (this.tplContent.length) {
+            util_1.log.info("render template content");
+            linq.from(this.tplContent).forEach(function (x) { return _this.renderTpl(x); });
+        }
         // copy/merge json content
         if (this.jsonContent.length) {
             util_1.log.info("copy json content");
@@ -157,6 +175,17 @@ var Build = /** @class */ (function () {
     };
     Build.prototype.copyStatic = function (content) {
         this.stream.add(this.util.copy(content.src, content.dest));
+    };
+    Build.prototype.renderTpl = function (content) {
+        if (!content.data)
+            content.data = {};
+        var getData = typeof content.data == "function"
+            ? function (f) { return content.data(f, content); }
+            : function (f) { return content.data; };
+        this.stream.add(this.util.src(content.src)
+            .pipe(tpldata(getData))
+            .pipe(tplrender({ path: content.path }))
+            .dest(content.dest));
     };
     Build.prototype.extendSourcemapOpts = function (opts, src, dest) {
         var srcDir = (this.util.getPath(this.dir(src)) || [])[0];

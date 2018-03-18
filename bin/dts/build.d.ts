@@ -1,5 +1,5 @@
 import * as typescript from "gulp-typescript";
-import { BuildConfig, MergedStream, JavacOptions, SourcemapOptions } from "./def";
+import { BuildConfig, MergedStream, JavacOptions, SourcemapOptions, TplContent } from "./def";
 import { BuildUtil } from "./util";
 /** Class for building web applications. */
 export declare class Build {
@@ -7,6 +7,7 @@ export declare class Build {
     util: BuildUtil;
     private stream;
     private staticContent;
+    private tplContent;
     private jsonContent;
     private tsContent;
     private scssContent;
@@ -18,6 +19,8 @@ export declare class Build {
     constructor(cfg?: BuildConfig);
     /** Adds content statically for copying without any building/parsing/etc. */
     add(src: string | string[], dest: string | string[]): Build;
+    /** Adds the specified template content. */
+    addTpl(src: string | string[], path: string | string[], dest: string | string[], data?: any | ((file: any, content: TplContent) => any)): Build;
     /** Adds json content.
      * extend -> merges all json files and extends the merged object
      * base -> takes the base object and merges it with the specified json files
@@ -43,6 +46,7 @@ export declare class Build {
     /** Runs the web build. */
     run(): MergedStream;
     private copyStatic(content);
+    private renderTpl(content);
     private extendSourcemapOpts(opts, src, dest);
     private resolveClassPath(path);
     private minifyJs();

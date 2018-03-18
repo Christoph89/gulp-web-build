@@ -12,8 +12,10 @@ import * as typescript from "gulp-typescript";
 import * as sourcemaps from "gulp-sourcemaps";
 import * as jmerge from "gulp-merge-json";
 import * as file from "gulp-file";
+import * as tplrender from "gulp-nunjucks-render";
+import * as tpldata from "gulp-data";
 import { BuildConfig, MergedStream, StaticContent, JsonContent, 
-         TSContent, SCSSContent, JavaContent, JavacOptions, SourcemapOptions } from "./def";
+         TSContent, SCSSContent, JavaContent, JavacOptions, SourcemapOptions, TplContent } from "./def";
 import { BuildUtil, log } from "./util";
 import { GulpStream } from "./stream";
 var mergeStream=require("merge-stream"); // merge-stream does not support ES6 import
@@ -25,6 +27,7 @@ export class Build
   public util: BuildUtil;
   private stream: MergedStream;
   private staticContent: StaticContent[]=[];
+  private tplContent: TplContent[]=[];
   private jsonContent: JsonContent[]=[];
   private tsContent: TSContent[]=[];
   private scssContent: SCSSContent[]=[];
@@ -64,6 +67,18 @@ export class Build
   public add(src: string|string[], dest: string|string[]): Build
   {
     this.staticContent.push({ src: src, dest: dest });
+    return this;
+  }
+
+  /** Adds the specified template content. */
+  public addTpl(src: string|string[], path: string|string[], dest: string|string[], data?: any|((file: any, content: TplContent) => any)): Build
+  {
+    this.tplContent.push({ 
+      src: src, 
+      dest: dest,
+      path: path,
+      data: data
+    });
     return this;
   }
 
@@ -168,6 +183,13 @@ export class Build
       linq.from(this.staticContent).forEach(x => this.copyStatic(x));
     }
 
+    // render templates
+    if (this.tplContent.length)
+    {
+      log.info("render template content");
+      linq.from(this.tplContent).forEach(x => this.renderTpl(x));
+    }
+
     // copy/merge json content
     if (this.jsonContent.length)
     {
@@ -202,6 +224,18 @@ export class Build
   private copyStatic(content: StaticContent)
   {
     this.stream.add(this.util.copy(content.src, content.dest));
+  }
+
+  private renderTpl(content: TplContent)
+  {
+    if (!content.data) content.data={};
+    var getData=typeof content.data=="function"
+      ?function (f) { return content.data(f, content); }
+      :function (f){ return content.data; };
+    this.stream.add(this.util.src(content.src)
+      .pipe(tpldata(getData))
+      .pipe(tplrender({ path: content.path }))
+      .dest(content.dest));
   }
 
   private extendSourcemapOpts(opts: SourcemapOptions, src: string, dest: string): SourcemapOptions

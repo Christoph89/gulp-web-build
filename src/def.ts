@@ -45,6 +45,14 @@ export interface StaticContent
   dest: string|string[];
 }
 
+/** Specifies template content. */
+export interface TplContent
+{
+  src: string|string[];
+  dest: string|string[];
+  path: string|string[];
+  data?: any | ((file: any, content: TplContent) => any);
+}
 
 /** Specfies typescript content. */
 export interface TSContent
@@ -55,7 +63,6 @@ export interface TSContent
   options?: ts.Settings;
   sourcemap?: SourcemapOptions;
 }
-
 
 /** Specfies Scss content. */
 export interface SCSSContent
