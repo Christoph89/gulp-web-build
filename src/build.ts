@@ -1,89 +1,199 @@
+import * as fs from "fs";
 import * as linq from "linq";
 import * as pathutil from "path";
 import * as deepAssign from "deep-assign";
 import * as empty from "gulp-empty";
 import * as rename from "gulp-rename";
 import * as sass from "gulp-sass";
+import * as javac from "gulp-javac";
 import * as uglify from "gulp-uglify";
 import * as uglifycss from "gulp-uglifycss";
 import * as typescript from "gulp-typescript";
 import * as sourcemaps from "gulp-sourcemaps";
-import { WebBuildConfig, MergedStream, StaticContent, TSContent, SCSSContent } from "./def";
-import { BuildUtil, log, logVerbose } from "./util";
+import * as jmerge from "gulp-merge-json";
+import * as file from "gulp-file";
+import { BuildConfig, MergedStream, StaticContent, JsonContent, 
+         TSContent, SCSSContent, JavaContent, JavacOptions, SourcemapOptions } from "./def";
+import { BuildUtil, log } from "./util";
+import { GulpStream } from "./stream";
 var mergeStream=require("merge-stream"); // merge-stream does not support ES6 import
 
 /** Class for building web applications. */
-export class WebBuild
+export class Build
 {
-  public cfg: WebBuildConfig;
+  public cfg: BuildConfig;
   public util: BuildUtil;
   private stream: MergedStream;
   private staticContent: StaticContent[]=[];
+  private jsonContent: JsonContent[]=[];
   private tsContent: TSContent[]=[];
   private scssContent: SCSSContent[]=[];
+  private javaContent: JavaContent[]=[];
+  private vscClassPath: string[]=[];
+  private classPath: string[]=[];
+  private jsonVars: any;
+  public vscSettings: any;
 
-  public constructor(cfg?: WebBuildConfig)
+  public constructor(cfg?: BuildConfig)
   {
     if (!cfg) cfg={};
-    this.util=new BuildUtil(deepAssign(this.cfg=cfg, <WebBuildConfig> {
+    this.util=new BuildUtil(this.cfg=deepAssign(<BuildConfig> {
       // default config
-    }));
+      // default encoding=utf8
+      prj: process.cwd(),
+      minify: process.env.minify=="true" || process.argv.indexOf("--dist")>-1,
+      sourcemaps: process.env.sourcemaps!="false" && process.argv.indexOf("--dist")==-1
+    }, cfg));
     this.stream=mergeStream();
+
+    var vscodeSettings=cfg.prj?pathutil.join(cfg.prj, "./.vscode/settings.json"):null;
+    if (vscodeSettings && fs.existsSync(vscodeSettings))
+    {
+      var vscSettings=this.vscSettings=this.readJson(vscodeSettings);
+      if (vscSettings)
+      {
+        this.vscClassPath=this.resolveClassPath(vscSettings["java.classPath"]||[]);
+        this.classPath=this.classPath.concat(this.vscClassPath);
+        if (this.vscClassPath.length)
+          log.info("add vs code classpath "+JSON.stringify(this.vscClassPath));
+      }
+    }
   }
 
   /** Adds content statically for copying without any building/parsing/etc. */
-  public add(src: string|string[], dest: string|string[]): WebBuild
+  public add(src: string|string[], dest: string|string[]): Build
   {
     this.staticContent.push({ src: src, dest: dest });
     return this;
   }
 
+  /** Adds json content.
+   * extend -> merges all json files and extends the merged object
+   * base -> takes the base object and merges it with the specified json files
+   * you can use the following vars:
+   * all keys specified in build config
+   * %vscClassPaths = classpaths specified in .vscode settings.json
+   * %classPaths = vscClassPaths + all classpaths specified by addJava
+   */
+  public addJson(src: string|any, dest: string, extend?: any, base?: any, replaceVars: boolean=true): Build
+  {
+    this.jsonContent.push({ 
+      src: src, 
+      dest: dest, 
+      extend: extend, 
+      replaceVars: replaceVars 
+    });
+    return this;
+  }
+
   /** Adds typescript content. */
-  public addTs(src: string, js: string, dts?: string, sourcemap?: string, options?: typescript.Settings): WebBuild
+  public addTs(src: string, js: string, dts?: string, sourcemap?: SourcemapOptions, options?: typescript.Settings): Build
   {
     this.tsContent.push({ 
       src: src, 
       js: js, 
       dts: dts, 
-      sourcemap: sourcemap,
+      sourcemap: this.extendSourcemapOpts(sourcemap, src, js),
       options: options 
     });
     return this;
   }
 
   /** Adds scss content. */
-  public addScss(src: string, css: string, sourcemap?: string,): WebBuild
+  public addScss(src: string, css: string, sourcemap?: SourcemapOptions,): Build
   {
     this.scssContent.push({ 
       src: src, 
-      css: this.ensureFileName(css, src, ".css"),
-      sourcemap: sourcemap
+      css: css,
+      sourcemap: this.extendSourcemapOpts(sourcemap, src, css)
     });
     return this;
   }
 
+  public addJava(src: string, jar: string, classpath?: string|string[], options?: JavacOptions): Build
+  {
+    // resolve classpaths
+    if (typeof classpath=="string") classpath=[classpath]; // ensure array
+    classpath=this.resolveClassPath(classpath);
+
+    this.javaContent.push({
+      src: src,
+      jar: jar,
+      classPath: this.vscClassPath.concat(classpath||[]), // concat with vsc classpaths
+      options: options
+    });
+
+    // add classpath
+    this.classPath.push(jar=this.resolveClassPath(jar));
+    log.info("add classpath "+jar);
+    if (classpath && classpath.length)
+    {
+      this.classPath=linq.from(this.classPath).union(linq.from(classpath)).toArray(); // remember classpaths
+      log.info("add classpath "+JSON.stringify(classpath));
+    }
+    return this;
+  }
+
+  /** Resolve the specified path */
+  public resolve(path: string): string[]
+  {
+    return this.util.getPath(path);
+  }
+
+  /** Resolves the specified path. */
+  public resolveFirst(path: string): string
+  {
+    return (this.util.getPath(path)||[])[0];
+  }
+
+  /** Reads the specified file. */
+  public read(path: string): string
+  {
+    return BuildUtil.read(path, this.cfg);
+  }
+
+  /** Reads the specified json file. */
+  public readJson(path: string) : any
+  {
+    return BuildUtil.readJson(path, this.cfg);
+  }
+
   /** Runs the web build. */
-  public run()
+  public run(): MergedStream
   {
     // copy static content
     if (this.staticContent.length)
     {
-      log("copy static content");
+      log.info("copy static content");
       linq.from(this.staticContent).forEach(x => this.copyStatic(x));
+    }
+
+    // copy/merge json content
+    if (this.jsonContent.length)
+    {
+      log.info("copy json content");
+      linq.from(this.jsonContent).forEach(x => this.mergeJson(x, this.getJsonVars()));
     }
 
     // build ts
     if (this.tsContent.length)
       {
-      log("build typescript");
+      log.info("build typescript");
       linq.from(this.tsContent).forEach(x => this.buildTs(x));
     }
 
     // build scss
     if (this.scssContent.length)
     {
-      log("build scss");
+      log.info("build scss");
       linq.from(this.scssContent).forEach(x => this.buildScss(x));
+    }
+
+    // build java
+    if (this.javaContent.length)
+    {
+      log.info("build java");
+      linq.from(this.javaContent).forEach(x => this.buildJava(x));
     }
 
     return this.stream;
@@ -92,6 +202,25 @@ export class WebBuild
   private copyStatic(content: StaticContent)
   {
     this.stream.add(this.util.copy(content.src, content.dest));
+  }
+
+  private extendSourcemapOpts(opts: SourcemapOptions, src: string, dest: string): SourcemapOptions
+  {
+    var srcDir=(this.util.getPath(this.dir(src)) || [])[0];
+    var destDir=(this.util.getPath(this.dir(dest)) || [])[0];
+    return deepAssign(<SourcemapOptions>{
+      // default options
+      includeContent: false,
+      sourceRoot: pathutil.relative(destDir, srcDir),
+      dest: "./"
+    }, opts);
+  }
+
+  private resolveClassPath(path: string|string[])
+  {
+    if (typeof path=="string")
+      return this.util.getPath(pathutil.join(this.cfg.prj, path))[0];
+    return linq.from(<string[]>path).select(x => this.resolveClassPath(x)).toArray();
   }
 
   private minifyJs()
@@ -108,28 +237,18 @@ export class WebBuild
     return empty();
   }
 
-  private sourcemapsInit()
+  private sourcemapsInit(opt: SourcemapOptions)
   {
     if (this.cfg.sourcemaps)
-      return sourcemaps.init();
+      return sourcemaps.init(opt);
     return empty();
   }
 
-  private sourcemapsWrite(path?: string)
+  private sourcemapsWrite(opt: SourcemapOptions)
   {
     if (this.cfg.sourcemaps)
-      return sourcemaps.write(path);
+      return sourcemaps.write(opt.dest, opt);
     return empty();
-  }
-
-  private ensureFileName(path: string, src: string, ext: string)
-  {
-    if (!path)
-      return null;
-    if (pathutil.extname(path))
-      return path;
-    if (path[path.length-1]!="/") path+="/"; // ensure trailing /
-    return path+pathutil.basename(src).replace(pathutil.extname(src), ext);
   }
 
   private dir(path: string)
@@ -146,6 +265,47 @@ export class WebBuild
     return empty()
   }
 
+  private getJsonVars(): any
+  {
+    if (!this.jsonVars)
+      this.jsonVars=deepAssign({}, this.cfg, {
+        "vscClassPath": this.vscClassPath,
+        "classPath": linq.from(this.classPath).orderBy(x => x).toArray()
+      });
+    return this.jsonVars;
+  }
+
+  private mergeJson(content: JsonContent, vars: any)
+  {
+    log.verbose("merge json "+JSON.stringify(content)+ "(vars "+JSON.stringify(vars)+")");
+
+    var fileName=pathutil.basename(pathutil.extname(content.dest)?content.dest:content.src);
+    var src: GulpStream;
+    if (typeof content.src=="string")
+      src=this.util.src(content.src);
+    else
+      src=this.util.contentSrc(content.src);
+    this.stream.add(src
+      .pipe(jmerge({
+        fileName: fileName,
+        startObj: content.base,
+        endObj: content.extend,
+        jsonSpace: this.cfg.minify?"":"  ",
+        jsonReplacer: content.replaceVars?(key, val) =>
+        {
+          if (typeof val=="string")
+          {
+            var list=BuildUtil.replaceVars(val, vars);
+            if (list.length>1)
+              return list;
+            return list[0];
+          }
+          return val;
+        }:null
+      }))
+      .dest(content.dest));
+  }
+
   private buildTs(content: TSContent)
   {
     // get config
@@ -160,18 +320,18 @@ export class WebBuild
       content.options.declaration=true;
 
     // log
-    logVerbose("build ts "+JSON.stringify(content));
+    log.verbose("build ts "+JSON.stringify(content));
 
     // compile ts
     var ts=<any>this.util.src(content.src)
-      .pipe(this.sourcemapsInit())
+      .pipe(this.sourcemapsInit(content.sourcemap))
       .pipe(typescript(content.options)).stream;
 
     // minify and save js
     if (ts.js && content.js)
       this.stream.add(this.util.extend(ts.js)
         .pipe(this.minifyJs())
-        .pipe(this.sourcemapsWrite(content.sourcemap||"./"))
+        .pipe(this.sourcemapsWrite(content.sourcemap))
         .dest(this.dir(content.js)));
 
     // save dts
@@ -184,15 +344,37 @@ export class WebBuild
   private buildScss(content: SCSSContent)
   {
     // log
-    logVerbose("build scss "+JSON.stringify(content));
+    log.verbose("build scss "+JSON.stringify(content));
 
     // compile scss
     this.stream.add(this.util.src(content.src)
-      .pipe(this.sourcemapsInit())
+      .pipe(this.sourcemapsInit(content.sourcemap))
       .pipe(sass().on("error", sass.logError))
       .pipe(this.minifyCss())
-      .pipe(rename(pathutil.basename(content.css)))
-      .pipe(this.sourcemapsWrite(content.sourcemap||"./"))
-      .dest(pathutil.dirname(content.css)));
+      .pipe(this.rename(content.css))
+      .pipe(this.sourcemapsWrite(content.sourcemap))
+      .dest(this.dir(content.css)));
+  }
+
+  private javac(jar: string, opt: JavacOptions, libs: string|string[])
+  {
+    var res=javac(pathutil.basename(jar), opt);
+    if (libs=this.util.getPath(libs))
+      res=res.addLibraries(libs);
+    return res;
+  }
+
+  private buildJava(content: JavaContent)
+  {
+    // get options
+    content.options=deepAssign({}, this.cfg.javac, content.options);
+
+    // log
+    log.verbose("build java "+JSON.stringify(content));
+
+    // compile java
+    this.stream.add(this.util.src(content.src)
+      .pipe(this.javac(content.jar, content.options, content.classPath))
+      .dest(pathutil.dirname(content.jar)));
   }
 }

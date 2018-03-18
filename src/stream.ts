@@ -3,27 +3,36 @@ import * as pathutil from "path";
 import * as gulp from "gulp";
 import * as concat from "gulp-concat";
 import * as multiDest from "gulp-multi-dest";
-import { WebBuildConfig } from "./def";
-import { BuildUtil, log, logVerbose } from "./util";
+import * as file from "gulp-file";
+import { BuildConfig } from "./def";
+import { BuildUtil, log } from "./util";
 
 /** Extended gulp stream. */
 export class GulpStream
 {
-  public cfg: WebBuildConfig;
+  public cfg: BuildConfig;
   public stream: NodeJS.ReadWriteStream;
 
-  public constructor(cfg: WebBuildConfig, stream: NodeJS.ReadWriteStream)
+  public constructor(cfg: BuildConfig, stream: NodeJS.ReadWriteStream)
   {
     this.cfg=cfg;
     this.stream=stream;
   }
 
   /** Return the source stream for the specified path. */
-  public static src(cfg: WebBuildConfig, path: string|string[]): GulpStream
+  public static src(cfg: BuildConfig, path: string|string[]): GulpStream
   {
     path=BuildUtil.getPath(path, cfg);
-    logVerbose("src "+JSON.stringify(path));
+    log.silly("src "+JSON.stringify(path));
     return new GulpStream(cfg, gulp.src(path));
+  }
+
+  /** Return the source stream for the specified content. */
+  public static contentSrc(cfg: BuildConfig, content: any): GulpStream
+  {
+    var str=(typeof content=="string")?content:JSON.stringify(content);
+    log.silly("content src "+str);
+    return new GulpStream(cfg, file("src", str, { src: true }));
   }
 
   /** Pipes the current stream to the specified desination stream. */
@@ -39,7 +48,7 @@ export class GulpStream
     // get path
     path=BuildUtil.getPath(path, this.cfg);
 
-    logVerbose("dest "+JSON.stringify(path));
+    log.silly("dest "+JSON.stringify(path));
     var filename: string;
     if (typeof path == "string")
     {

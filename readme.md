@@ -1,3 +1,3 @@
-# gulp-web-build
+#gulp-web-build
 
-Util to build a web application with gulp.
+Util for building a web application with gulp.
