@@ -14,8 +14,9 @@ import * as jmerge from "gulp-merge-json";
 import * as file from "gulp-file";
 import * as tplrender from "gulp-nunjucks-render";
 import * as tpldata from "gulp-data";
+import * as async from "async"; 
 import { BuildConfig, MergedStream, StaticContent, JsonContent, 
-         TSContent, SCSSContent, JavaContent, JavacOptions, SourcemapOptions, TplContent } from "./def";
+         TSContent, SCSSContent, JavaContent, JavacOptions, SourcemapOptions, TplContent, ResultMap, JsonResultMap } from "./def";
 import { BuildUtil, log } from "./util";
 import { GulpStream } from "./stream";
 var mergeStream=require("merge-stream"); // merge-stream does not support ES6 import
@@ -25,6 +26,7 @@ export class Build
 {
   public cfg: BuildConfig;
   public util: BuildUtil;
+  private series: BuildSeries;
   private stream: MergedStream;
   private staticContent: StaticContent[]=[];
   private tplContent: TplContent[]=[];
@@ -37,9 +39,17 @@ export class Build
   private jsonVars: any;
   public vscSettings: any;
 
-  public constructor(cfg?: BuildConfig)
+  public constructor(cfg?: BuildConfig, series?: BuildSeries)
   {
     if (!cfg) cfg={};
+    this.series=series || new BuildSeries();
+    this.series.add(this);
+    this.init(cfg);
+  }
+
+  /** Initializes the current build. */
+  private init(cfg: BuildConfig)
+  {
     this.util=new BuildUtil(this.cfg=deepAssign(<BuildConfig> {
       // default config
       // default encoding=utf8
@@ -90,7 +100,7 @@ export class Build
    * %vscClassPaths = classpaths specified in .vscode settings.json
    * %classPaths = vscClassPaths + all classpaths specified by addJava
    */
-  public addJson(src: string|any, dest: string, extend?: any, base?: any, replaceVars: boolean=true): Build
+  public addJson(src: string|any, dest: string|JsonResultMap, extend?: any, base?: any, replaceVars: boolean=true): Build
   {
     this.jsonContent.push({ 
       src: src, 
@@ -99,6 +109,17 @@ export class Build
       replaceVars: replaceVars 
     });
     return this;
+  }
+
+  /** Sets the config of the current build. */
+  public setCfg(src: string|any, extend?: any, base?: any, replaceVars: boolean=true)
+  {
+    this.addJson(src, (json, done) => 
+    {
+      linq.from(this.series.builds).forEach(b => b.cfg=json);
+      done(null, json);
+    }, extend, base, replaceVars);
+    return this.next();
   }
 
   /** Adds typescript content. */
@@ -174,8 +195,15 @@ export class Build
   }
 
   /** Runs the web build. */
-  public run(): MergedStream
+  public run(series_cb?: (error?: any) => void): MergedStream
   {
+    // run series
+    if (series_cb)
+    {
+      this.series.run(series_cb);
+      return null;
+    }
+
     // copy static content
     if (this.staticContent.length)
     {
@@ -219,6 +247,11 @@ export class Build
     }
 
     return this.stream;
+  }
+
+  public next(): Build
+  {
+    return new Build(this.cfg, this.series);
   }
 
   private copyStatic(content: StaticContent)
@@ -313,9 +346,23 @@ export class Build
   {
     log.verbose("merge json "+JSON.stringify(content)+ "(vars "+JSON.stringify(vars)+")");
 
-    var fileName=pathutil.basename(pathutil.extname(content.dest)?content.dest:content.src);
+    // get filename
+    var fileName=(typeof content.dest=="string")&&pathutil.basename(pathutil.extname(content.dest)?content.dest:content.src);
+
+    // get result map
+    console.log("aaaa"+content.dest);
+    if (typeof content.dest=="function")
+    {
+      var map=content.dest;
+      content.dest=function (file, done)
+      {
+        var json=JSON.parse(file.contents.toString());
+        map(json, done);
+      };
+    }
+
     var src: GulpStream;
-    if (typeof content.src=="string")
+    if (typeof content.src=="string" || Array.isArray(content.src))
       src=this.util.src(content.src);
     else
       src=this.util.contentSrc(content.src);
@@ -410,5 +457,35 @@ export class Build
     this.stream.add(this.util.src(content.src)
       .pipe(this.javac(content.jar, content.options, content.classPath))
       .dest(pathutil.dirname(content.jar)));
+  }
+}
+
+/** Defines a build series. */
+export class BuildSeries
+{
+  /** Initializes a new instance. */
+  constructor(builds?: Build[]) {
+    this.builds=builds||[];
+  }
+
+  /** The builds of the series. */
+  public builds: Build[];
+
+  /** Adds the specified build. */
+  public add(build: Build)
+  {
+    this.builds.push(build);
+  }
+
+  /** Runs the series. */
+  public run(cb: (error?: any) => void)
+  {
+    async.series(linq.from(this.builds||[]).select(b => 
+    {
+      return function (next)
+      {
+        b.run().on("end", next);
+      };
+    }).toArray(), cb);
   }
 }

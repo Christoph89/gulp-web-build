@@ -15,11 +15,12 @@ var sourcemaps = require("gulp-sourcemaps");
 var jmerge = require("gulp-merge-json");
 var tplrender = require("gulp-nunjucks-render");
 var tpldata = require("gulp-data");
+var async = require("async");
 var util_1 = require("./util");
 var mergeStream = require("merge-stream"); // merge-stream does not support ES6 import
 /** Class for building web applications. */
 var Build = /** @class */ (function () {
-    function Build(cfg) {
+    function Build(cfg, series) {
         this.staticContent = [];
         this.tplContent = [];
         this.jsonContent = [];
@@ -30,6 +31,12 @@ var Build = /** @class */ (function () {
         this.classPath = [];
         if (!cfg)
             cfg = {};
+        this.series = series || new BuildSeries();
+        this.series.add(this);
+        this.init(cfg);
+    }
+    /** Initializes the current build. */
+    Build.prototype.init = function (cfg) {
         this.util = new util_1.BuildUtil(this.cfg = deepAssign({
             // default config
             // default encoding=utf8
@@ -48,7 +55,7 @@ var Build = /** @class */ (function () {
                     util_1.log.info("add vs code classpath " + JSON.stringify(this.vscClassPath));
             }
         }
-    }
+    };
     /** Adds content statically for copying without any building/parsing/etc. */
     Build.prototype.add = function (src, dest) {
         this.staticContent.push({ src: src, dest: dest });
@@ -81,6 +88,16 @@ var Build = /** @class */ (function () {
             replaceVars: replaceVars
         });
         return this;
+    };
+    /** Sets the config of the current build. */
+    Build.prototype.setCfg = function (src, extend, base, replaceVars) {
+        var _this = this;
+        if (replaceVars === void 0) { replaceVars = true; }
+        this.addJson(src, function (json, done) {
+            linq.from(_this.series.builds).forEach(function (b) { return b.cfg = json; });
+            done(null, json);
+        }, extend, base, replaceVars);
+        return this.next();
     };
     /** Adds typescript content. */
     Build.prototype.addTs = function (src, js, dts, sourcemap, options) {
@@ -139,8 +156,13 @@ var Build = /** @class */ (function () {
         return util_1.BuildUtil.readJson(path, this.cfg);
     };
     /** Runs the web build. */
-    Build.prototype.run = function () {
+    Build.prototype.run = function (series_cb) {
         var _this = this;
+        // run series
+        if (series_cb) {
+            this.series.run(series_cb);
+            return null;
+        }
         // copy static content
         if (this.staticContent.length) {
             util_1.log.info("copy static content");
@@ -172,6 +194,9 @@ var Build = /** @class */ (function () {
             linq.from(this.javaContent).forEach(function (x) { return _this.buildJava(x); });
         }
         return this.stream;
+    };
+    Build.prototype.next = function () {
+        return new Build(this.cfg, this.series);
     };
     Build.prototype.copyStatic = function (content) {
         this.stream.add(this.util.copy(content.src, content.dest));
@@ -243,9 +268,19 @@ var Build = /** @class */ (function () {
     };
     Build.prototype.mergeJson = function (content, vars) {
         util_1.log.verbose("merge json " + JSON.stringify(content) + "(vars " + JSON.stringify(vars) + ")");
-        var fileName = pathutil.basename(pathutil.extname(content.dest) ? content.dest : content.src);
+        // get filename
+        var fileName = (typeof content.dest == "string") && pathutil.basename(pathutil.extname(content.dest) ? content.dest : content.src);
+        // get result map
+        console.log("aaaa" + content.dest);
+        if (typeof content.dest == "function") {
+            var map = content.dest;
+            content.dest = function (file, done) {
+                var json = JSON.parse(file.contents.toString());
+                map(json, done);
+            };
+        }
         var src;
-        if (typeof content.src == "string")
+        if (typeof content.src == "string" || Array.isArray(content.src))
             src = this.util.src(content.src);
         else
             src = this.util.contentSrc(content.src);
@@ -325,5 +360,26 @@ var Build = /** @class */ (function () {
     return Build;
 }());
 exports.Build = Build;
+/** Defines a build series. */
+var BuildSeries = /** @class */ (function () {
+    /** Initializes a new instance. */
+    function BuildSeries(builds) {
+        this.builds = builds || [];
+    }
+    /** Adds the specified build. */
+    BuildSeries.prototype.add = function (build) {
+        this.builds.push(build);
+    };
+    /** Runs the series. */
+    BuildSeries.prototype.run = function (cb) {
+        async.series(linq.from(this.builds || []).select(function (b) {
+            return function (next) {
+                b.run().on("end", next);
+            };
+        }).toArray(), cb);
+    };
+    return BuildSeries;
+}());
+exports.BuildSeries = BuildSeries;
 
 //# sourceMappingURL=build.js.map

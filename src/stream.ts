@@ -4,7 +4,8 @@ import * as gulp from "gulp";
 import * as concat from "gulp-concat";
 import * as multiDest from "gulp-multi-dest";
 import * as file from "gulp-file";
-import { BuildConfig } from "./def";
+import * as map from "map-stream";
+import { BuildConfig, ResultMap } from "./def";
 import { BuildUtil, log } from "./util";
 
 /** Extended gulp stream. */
@@ -43,8 +44,12 @@ export class GulpStream
   }
 
   /** Sets the destination for the current stream. */
-  public dest(path: string|string[]): NodeJS.ReadWriteStream
+  public dest(path: string|string[]|ResultMap): NodeJS.ReadWriteStream
   {
+    // map result?
+    if (typeof path == "function")
+      return this.stream.pipe(map(path));
+
     // get path
     path=BuildUtil.getPath(path, this.cfg);
 
@@ -55,7 +60,7 @@ export class GulpStream
       filename=pathutil.extname(path)?pathutil.basename(path):null;
       if (filename)
         return this.stream.pipe(concat(filename)).pipe(gulp.dest(pathutil.dirname(path)));
-      this.stream.pipe(gulp.dest(path));
+      return this.stream.pipe(gulp.dest(path));
     }
     else
     {

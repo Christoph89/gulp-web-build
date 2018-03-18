@@ -1,5 +1,6 @@
 import * as sh from "shelljs";
 import * as $linq from "linq";
+import { Build } from "./build";
 
 export { BuildConfig, MergedStream, JavacOptions, SourcemapOptions, GulpTask } from "./def"
 export { BuildUtil, log, task, runTask, registeredTasks, zip } from "./util";

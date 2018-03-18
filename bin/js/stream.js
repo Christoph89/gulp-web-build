@@ -6,6 +6,7 @@ var gulp = require("gulp");
 var concat = require("gulp-concat");
 var multiDest = require("gulp-multi-dest");
 var file = require("gulp-file");
+var map = require("map-stream");
 var util_1 = require("./util");
 /** Extended gulp stream. */
 var GulpStream = /** @class */ (function () {
@@ -32,6 +33,9 @@ var GulpStream = /** @class */ (function () {
     };
     /** Sets the destination for the current stream. */
     GulpStream.prototype.dest = function (path) {
+        // map result?
+        if (typeof path == "function")
+            return this.stream.pipe(map(path));
         // get path
         path = util_1.BuildUtil.getPath(path, this.cfg);
         util_1.log.silly("dest " + JSON.stringify(path));
@@ -40,7 +44,7 @@ var GulpStream = /** @class */ (function () {
             filename = pathutil.extname(path) ? pathutil.basename(path) : null;
             if (filename)
                 return this.stream.pipe(concat(filename)).pipe(gulp.dest(pathutil.dirname(path)));
-            this.stream.pipe(gulp.dest(path));
+            return this.stream.pipe(gulp.dest(path));
         }
         else {
             var paths = linq.from(path).select(function (p) {

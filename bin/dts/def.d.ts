@@ -65,7 +65,7 @@ export interface JavaContent {
 /** Specifies json content. */
 export interface JsonContent {
     src: string | any;
-    dest: string;
+    dest: string | JsonResultMap;
     base?: any;
     extend?: any;
     replaceVars?: boolean;
@@ -76,4 +76,12 @@ export interface GulpTask {
     group?: "build" | "test" | "none";
     dependencies?: string[];
     args?: string[];
+}
+/** Specifies a gulp result map function. */
+export interface ResultMap {
+    (file: any, done: (err, data) => void): void;
+}
+/** Specifies a gulp json result map function. */
+export interface JsonResultMap {
+    (json: any, done: (err, json) => void): void;
 }

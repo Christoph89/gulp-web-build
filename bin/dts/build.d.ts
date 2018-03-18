@@ -1,10 +1,11 @@
 import * as typescript from "gulp-typescript";
-import { BuildConfig, MergedStream, JavacOptions, SourcemapOptions, TplContent } from "./def";
+import { BuildConfig, MergedStream, JavacOptions, SourcemapOptions, TplContent, JsonResultMap } from "./def";
 import { BuildUtil } from "./util";
 /** Class for building web applications. */
 export declare class Build {
     cfg: BuildConfig;
     util: BuildUtil;
+    private series;
     private stream;
     private staticContent;
     private tplContent;
@@ -16,7 +17,9 @@ export declare class Build {
     private classPath;
     private jsonVars;
     vscSettings: any;
-    constructor(cfg?: BuildConfig);
+    constructor(cfg?: BuildConfig, series?: BuildSeries);
+    /** Initializes the current build. */
+    private init(cfg);
     /** Adds content statically for copying without any building/parsing/etc. */
     add(src: string | string[], dest: string | string[]): Build;
     /** Adds the specified template content. */
@@ -29,7 +32,9 @@ export declare class Build {
      * %vscClassPaths = classpaths specified in .vscode settings.json
      * %classPaths = vscClassPaths + all classpaths specified by addJava
      */
-    addJson(src: string | any, dest: string, extend?: any, base?: any, replaceVars?: boolean): Build;
+    addJson(src: string | any, dest: string | JsonResultMap, extend?: any, base?: any, replaceVars?: boolean): Build;
+    /** Sets the config of the current build. */
+    setCfg(src: string | any, extend?: any, base?: any, replaceVars?: boolean): Build;
     /** Adds typescript content. */
     addTs(src: string, js: string, dts?: string, sourcemap?: SourcemapOptions, options?: typescript.Settings): Build;
     /** Adds scss content. */
@@ -44,7 +49,8 @@ export declare class Build {
     /** Reads the specified json file. */
     readJson(path: string): any;
     /** Runs the web build. */
-    run(): MergedStream;
+    run(series_cb?: (error?: any) => void): MergedStream;
+    next(): Build;
     private copyStatic(content);
     private renderTpl(content);
     private extendSourcemapOpts(opts, src, dest);
@@ -61,4 +67,15 @@ export declare class Build {
     private buildScss(content);
     private javac(jar, opt, libs);
     private buildJava(content);
+}
+/** Defines a build series. */
+export declare class BuildSeries {
+    /** Initializes a new instance. */
+    constructor(builds?: Build[]);
+    /** The builds of the series. */
+    builds: Build[];
+    /** Adds the specified build. */
+    add(build: Build): void;
+    /** Runs the series. */
+    run(cb: (error?: any) => void): void;
 }
