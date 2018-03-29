@@ -1,6 +1,8 @@
 /// <reference types="node" />
+/// <reference types="undertaker" />
 import * as ts from "gulp-typescript";
 import * as sourcemaps from "gulp-sourcemaps";
+import { TaskFunction } from "undertaker";
 /** Config for building web applications. */
 export interface BuildConfig {
     /** Specifies the project directory. */
@@ -16,6 +18,10 @@ export interface BuildConfig {
     /** Specifies custom variables which can be used for paths. */
     [vars: string]: any;
 }
+export interface ReadWriteStreamExt extends NodeJS.ReadWriteStream {
+    logMsg?: string;
+    meta?: any;
+}
 /** Merge stream. */
 export interface MergedStream extends NodeJS.ReadWriteStream {
     add(source: NodeJS.ReadableStream): MergedStream;
@@ -29,20 +35,33 @@ export interface JavacOptions {
 export interface SourcemapOptions extends sourcemaps.InitOptions, sourcemaps.WriteOptions {
     dest?: string;
 }
+/** Specifies build content types. */
+export declare enum BuildContentType {
+    Static = 0,
+    Tpl = 1,
+    Typescript = 2,
+    Scss = 3,
+    Json = 4,
+    Java = 5,
+}
+/** Specifies build content. */
+export interface BuildContent {
+    contentType: BuildContentType;
+}
 /** Specfies static content. */
-export interface StaticContent {
+export interface StaticContent extends BuildContent {
     src: string | string[];
     dest: string | string[];
 }
 /** Specifies template content. */
-export interface TplContent {
+export interface TplContent extends BuildContent {
     src: string | string[];
     dest: string | string[];
     path: string | string[];
     data?: any | ((file: any, content: TplContent) => any);
 }
 /** Specfies typescript content. */
-export interface TSContent {
+export interface TSContent extends BuildContent {
     src: string;
     js: string;
     dts: string;
@@ -50,25 +69,31 @@ export interface TSContent {
     sourcemap?: SourcemapOptions;
 }
 /** Specfies Scss content. */
-export interface SCSSContent {
+export interface SCSSContent extends BuildContent {
     src: string;
     css: string;
     sourcemap?: SourcemapOptions;
 }
 /** Specfies java content. */
-export interface JavaContent {
+export interface JavaContent extends BuildContent {
     src: string;
     jar: string;
     classPath?: string[];
     options?: any;
 }
 /** Specifies json content. */
-export interface JsonContent {
+export interface JsonContent extends BuildContent {
     src: string | any;
-    dest: string | JsonResultMap;
+    dest: string | any;
     base?: any;
     extend?: any;
+    filter?: string[] | JsonFilter | (string[] | JsonFilter)[];
     replaceVars?: boolean;
+    vars?: any;
+}
+/** Specifies a json filter. */
+export interface JsonFilter {
+    (json: any): any;
 }
 /** Specifies a gulp task. */
 export interface GulpTask {
@@ -76,12 +101,13 @@ export interface GulpTask {
     group?: "build" | "test" | "none";
     dependencies?: string[];
     args?: string[];
+    fn?: TaskFunction;
 }
-/** Specifies a gulp result map function. */
-export interface ResultMap {
-    (file: any, done: (err, data) => void): void;
+/** Destination map function. */
+export interface DestinationMap {
+    (file: any): any;
 }
-/** Specifies a gulp json result map function. */
-export interface JsonResultMap {
-    (json: any, done: (err, json) => void): void;
+/** Build callback function. */
+export interface BuildCallback {
+    (error?: any): void;
 }

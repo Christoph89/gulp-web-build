@@ -1,9 +1,8 @@
 import * as del from "del";
 import * as linq from "linq";
 import { Build, log } from "./index";
-import { MergedStream } from "./def";
+import { MergedStream, BuildCallback } from "./def";
 import { BuildUtil } from "./util";
-var mergeStream=require("merge-stream"); // merge-stream does not support ES6 import
 
 /** Specifies utitilies to clean a project. */
 export class Clean
@@ -36,11 +35,12 @@ export class Clean
   }
 
   /** Deletes all specified paths. */
-  public run()
+  public run(cb: BuildCallback)
   {
     return del(this.paths, { force: true }).then(paths =>
     {
       log.info("Deleted "+(paths||[]).length+" file(s). "+JSON.stringify(paths, null, "  "));
+      cb();
     });
   }
 }

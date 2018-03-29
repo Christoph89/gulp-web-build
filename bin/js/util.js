@@ -7,25 +7,34 @@ var winston = require("winston");
 var gulp = require("gulp");
 var gzip = require("gulp-zip");
 var shell = require("shelljs");
+var async = require("async");
 var stripJsonComments = require("strip-json-comments");
 var stream_1 = require("./stream");
-var mergeStream = require("merge-stream"); // merge-stream does not support ES6 import
 // log utils
 var logLevel = process.env.log || process.env.LOG || "info";
-exports.log = new winston.Logger({
-    transports: [
-        new winston.transports.Console({
-            timestamp: function () { return (new Date()).toISOString(); },
-            colorize: true,
-            level: logLevel
-        })
-    ]
+var transport = new winston.transports.Console({
+    timestamp: function () { return (new Date()).toISOString(); },
+    colorize: true,
+    level: logLevel
 });
+var writeLogMeta;
+exports.log = new winston.Logger({
+    transports: [transport],
+    rewriters: [function (lvl, msg, meta) {
+            if (logLevel != "debug" && logLevel != "silly" && logLevel != "warn" && logLevel != "error" || !meta || linq.from(meta).count() == 0)
+                return null;
+            return writeLogMeta ? writeLogMeta(logLevel, lvl, meta) : JSON.stringify(meta, null, "  ");
+        }]
+});
+function logMeta(writeMeta) {
+    writeLogMeta = writeMeta;
+}
+exports.logMeta = logMeta;
 // export gulp
 var tasks = [];
 function task(t, dependencies, fn) {
     // get dependencies and task func
-    if (!fn) {
+    if (typeof dependencies === "function") {
         fn = dependencies;
         dependencies = null;
     }
@@ -35,17 +44,50 @@ function task(t, dependencies, fn) {
         group: t == "build" || t == "dist" ? "build" : null,
         dependencies: dependencies
     } : t;
+    // set task function
+    tn.fn = function (cb) {
+        exports.log.info("[TASK " + tn.name.toUpperCase() + "]");
+        return fn ? fn(cb) : cb();
+    };
     // remember task in environment vars
     tasks.push(tn);
     process.env.regtasks = JSON.stringify(tasks);
-    // register gulp task.
-    return gulp.task(tn.name, tn.dependencies, function (cb) {
-        exports.log.info("[TASK " + tn.name.toUpperCase() + "]");
-        return fn(cb);
-    });
+    // register gulp task series
+    if (tn.dependencies && tn.dependencies.length && tn.dependencies[0] == "@series:")
+        return gulp.task(tn.name, function (cb) {
+            var funcs = linq.from(tn.dependencies).skip(1)
+                .selectMany(function (x) { return getTaskFnRecursive(x); }).toArray();
+            funcs.push(tn.fn);
+            async.series(funcs, cb);
+        });
+    // register normal gulp task.
+    return gulp.task(tn.name, tn.dependencies, tn.fn);
 }
 exports.task = task;
 ;
+function getTaskFnRecursive(taskName) {
+    var fn = [];
+    var task = getTask(taskName);
+    if (task) {
+        if (task.dependencies)
+            fn = fn.concat(linq.from(task.dependencies).selectMany(function (x) { return getTaskFnRecursive(x); }).toArray());
+        fn.push(task.fn);
+    }
+    return fn;
+}
+/** Returns a dependency series */
+function series() {
+    var tasks = [];
+    for (var _i = 0; _i < arguments.length; _i++) {
+        tasks[_i] = arguments[_i];
+    }
+    return ["@series:"].concat(tasks);
+}
+exports.series = series;
+/** Returns the specified task. */
+function getTask(name) {
+    return linq.from(tasks).firstOrDefault(function (x) { return x.name == name; }, null);
+}
 /** Runs the specified task synchronously. */
 function runTask(name) {
     var args = [];
@@ -90,8 +132,18 @@ var BuildUtil = /** @class */ (function () {
             else
                 res = linq.from(path).selectMany(function (p) { return BuildUtil.getPath(p, vars); }).distinct().toArray();
         }
-        if (typeof res == "string")
+        if (typeof res == "string") {
+            if (res == "null")
+                return null;
             return [res]; // single path string
+        }
+        // is empty array or first entry is null or "null"
+        if (Array.isArray(res)) {
+            // remove null entries
+            res = linq.from(res).where(function (x) { return x != null && x != "null"; }).toArray();
+            if (res.length == 0)
+                return null;
+        }
         return res; // array
     };
     /** Replaces all occurences of the keys specified in vars with its value. */
@@ -128,10 +180,10 @@ var BuildUtil = /** @class */ (function () {
         return JSON.parse(stripJsonComments(BuildUtil.read(path, vars)));
     };
     /** Extends the specified stream. */
-    BuildUtil.prototype.extend = function (stream) {
+    BuildUtil.prototype.extend = function (stream, meta) {
         if (stream instanceof stream_1.GulpStream)
             return stream;
-        return new stream_1.GulpStream(this.cfg, stream);
+        return new stream_1.GulpStream(this.cfg, stream, meta);
     };
     /** Return the source stream for the specified path. */
     BuildUtil.prototype.src = function (path) {
@@ -143,11 +195,9 @@ var BuildUtil = /** @class */ (function () {
     };
     /** Copies the specified source(s) to the specified desination(s). */
     BuildUtil.prototype.copy = function (source, destination) {
-        exports.log.verbose("copy " + JSON.stringify(source) + " -> " + JSON.stringify(destination));
-        return mergeStream(stream_1.GulpStream.src(this.cfg, source).dest(destination));
+        exports.log.silly("copy", source, destination);
+        return stream_1.GulpStream.src(this.cfg, source).dest(destination);
     };
     return BuildUtil;
 }());
 exports.BuildUtil = BuildUtil;
-
-//# sourceMappingURL=util.js.map

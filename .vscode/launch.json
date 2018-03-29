@@ -1,0 +1,105 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Gulp prep",
+      "program": "${workspaceRoot}/node_modules/gulp/bin/gulp.js",
+      "args": [
+        "prep"
+      ],
+      "cwd": "${workspaceRoot}",
+      "sourceMaps": true,
+      "outFiles": [
+        "${workspaceRoot}/.node"
+      ],
+      "env": {
+        "TS_NODE_CACHE_DIRECTORY": "${workspaceRoot}/.node",
+        "LOG": "debug"
+      },
+      "protocol": "inspector",
+      "console": "integratedTerminal"
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Gulp fix-gulp-merge-json",
+      "program": "${workspaceRoot}/node_modules/gulp/bin/gulp.js",
+      "args": [
+        "fix-gulp-merge-json"
+      ],
+      "cwd": "${workspaceRoot}",
+      "sourceMaps": true,
+      "outFiles": [
+        "${workspaceRoot}/.node"
+      ],
+      "env": {
+        "TS_NODE_CACHE_DIRECTORY": "${workspaceRoot}/.node",
+        "LOG": "debug"
+      },
+      "protocol": "inspector",
+      "console": "integratedTerminal"
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Gulp build",
+      "program": "${workspaceRoot}/node_modules/gulp/bin/gulp.js",
+      "args": [
+        "build"
+      ],
+      "cwd": "${workspaceRoot}",
+      "sourceMaps": true,
+      "outFiles": [
+        "${workspaceRoot}/.node"
+      ],
+      "env": {
+        "TS_NODE_CACHE_DIRECTORY": "${workspaceRoot}/.node",
+        "LOG": "debug"
+      },
+      "protocol": "inspector",
+      "console": "integratedTerminal"
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Gulp clean",
+      "program": "${workspaceRoot}/node_modules/gulp/bin/gulp.js",
+      "args": [
+        "clean"
+      ],
+      "cwd": "${workspaceRoot}",
+      "sourceMaps": true,
+      "outFiles": [
+        "${workspaceRoot}/.node"
+      ],
+      "env": {
+        "TS_NODE_CACHE_DIRECTORY": "${workspaceRoot}/.node",
+        "LOG": "debug"
+      },
+      "protocol": "inspector",
+      "console": "integratedTerminal"
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Gulp rebuild",
+      "program": "${workspaceRoot}/node_modules/gulp/bin/gulp.js",
+      "args": [
+        "rebuild"
+      ],
+      "cwd": "${workspaceRoot}",
+      "sourceMaps": true,
+      "outFiles": [
+        "${workspaceRoot}/.node"
+      ],
+      "env": {
+        "TS_NODE_CACHE_DIRECTORY": "${workspaceRoot}/.node",
+        "LOG": "debug"
+      },
+      "protocol": "inspector",
+      "console": "integratedTerminal"
+    }
+  ]
+}

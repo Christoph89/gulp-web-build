@@ -8,33 +8,43 @@ import * as gulp from "gulp";
 import * as multiDest from "gulp-multi-dest";
 import * as gzip from "gulp-zip";
 import * as shell from "shelljs";
+import * as async from "async";
 import * as stripJsonComments from "strip-json-comments";
 import { BuildConfig, GulpTask } from "./def";
 import { GulpStream } from "./stream";
 import { TaskFunction } from "undertaker";
-var mergeStream=require("merge-stream"); // merge-stream does not support ES6 import
 
 // log utils
 var logLevel=process.env.log || process.env.LOG || "info";
-export var log=new winston.Logger({
-  transports: [
-    new winston.transports.Console({
-      timestamp: () => (new Date()).toISOString(),
-      colorize: true,
-      level: logLevel,
-    })
-  ]
+var transport=new winston.transports.Console({
+  timestamp: () => (new Date()).toISOString(),
+  colorize: true,
+  level: logLevel,
 });
+var writeLogMeta: (logLevel: string, curLevel: string, meta: any) => string;
+export var log=new winston.Logger({
+  transports: [transport],
+  rewriters: [(lvl, msg, meta) =>
+  {
+    if (logLevel!="debug" && logLevel!="silly" && logLevel!="warn" && logLevel!="error" || !meta || linq.from(meta).count()==0)
+      return null;
+    return writeLogMeta?writeLogMeta(logLevel, lvl, meta):JSON.stringify(meta, null, "  ");
+  }]
+});
+export function logMeta(writeMeta: (logLevel: string, curLevel: string, meta: any) => string)
+{
+  writeLogMeta=writeMeta;
+}
 
 // export gulp
 var tasks: GulpTask[]=[];
 export function task(name: string, fn: TaskFunction);
-export function task (name: string, dependencies: string[], fn: TaskFunction);
+export function task(name: string, dependencies: string[], fn?: TaskFunction);
 export function task(t: GulpTask, fn: TaskFunction);
 export function task(t: any, dependencies: any, fn?: TaskFunction)
 {
   // get dependencies and task func
-  if (!fn) 
+  if (typeof dependencies==="function") 
   {
     fn=dependencies;
     dependencies=null;
@@ -44,20 +54,57 @@ export function task(t: any, dependencies: any, fn?: TaskFunction)
   var tn: GulpTask=(typeof t=="string")?{ 
     name: t, 
     group: t=="build"||t=="dist"?"build":null, // register build and dist task automatically as build task
-    dependencies: dependencies 
+    dependencies: dependencies
   }:t;
+
+  // set task function
+  tn.fn=function (cb) {
+    log.info("[TASK "+tn.name.toUpperCase()+"]");
+    return fn?fn(cb):cb();
+  };
 
   // remember task in environment vars
   tasks.push(tn);
   process.env.regtasks=JSON.stringify(tasks);
 
-  // register gulp task.
-  return (<any>gulp).task(tn.name, tn.dependencies, function(cb)
-  {
-    log.info("[TASK "+tn.name.toUpperCase()+"]");
-    return fn(cb);
-  });
+  // register gulp task series
+  if (tn.dependencies && tn.dependencies.length && tn.dependencies[0]=="@series:")
+    return (<any>gulp).task(tn.name, function(cb)
+    {
+      var funcs=linq.from(tn.dependencies).skip(1)
+        .selectMany(x => getTaskFnRecursive(x)).toArray();
+      funcs.push(tn.fn);
+      async.series(funcs, cb);
+    });
+
+  // register normal gulp task.
+  return (<any>gulp).task(tn.name, tn.dependencies, tn.fn);
 };
+
+function getTaskFnRecursive(taskName: string): TaskFunction[]
+{
+  var fn: TaskFunction[]=[];
+  var task=getTask(taskName);
+  if (task)
+  {
+    if (task.dependencies)
+      fn=fn.concat(linq.from(task.dependencies).selectMany(x => getTaskFnRecursive(x)).toArray());
+    fn.push(task.fn);
+  }
+  return fn;
+}
+
+/** Returns a dependency series */
+export function series(...tasks: string[]): string[]
+{
+  return ["@series:"].concat(tasks);
+}
+
+/** Returns the specified task. */
+function getTask(name: string): GulpTask
+{
+  return linq.from(tasks).firstOrDefault(x => x.name==name, null);
+}
 
 /** Runs the specified task synchronously. */
 export function runTask(name: string, ...args: string[])
@@ -113,7 +160,19 @@ export class BuildUtil
     }
 
     if (typeof res == "string")
+    {
+      if (res=="null")
+        return null;
       return [res]; // single path string
+    }
+    // is empty array or first entry is null or "null"
+    if (Array.isArray(res))
+    {
+      // remove null entries
+      res=linq.from(res).where(x => x!=null && x!="null").toArray();
+      if (res.length==0)
+        return null;
+    }
     return res; // array
   }
 
@@ -160,11 +219,11 @@ export class BuildUtil
   }
 
   /** Extends the specified stream. */
-  public extend(stream: NodeJS.ReadWriteStream): GulpStream
+  public extend(stream: NodeJS.ReadWriteStream, meta?: any): GulpStream
   {
     if (stream instanceof GulpStream)
       return stream;
-    return new GulpStream(this.cfg, stream);
+    return new GulpStream(this.cfg, stream, meta);
   }
 
   /** Return the source stream for the specified path. */
@@ -180,9 +239,9 @@ export class BuildUtil
   }
 
   /** Copies the specified source(s) to the specified desination(s). */
-  public copy(source: string|string[], destination: string|string[])
+  public copy(source: string|string[], destination: string|string[]): NodeJS.ReadWriteStream
   {
-    log.verbose("copy "+JSON.stringify(source)+" -> "+JSON.stringify(destination));
-    return mergeStream(GulpStream.src(this.cfg, source).dest(destination));
+    log.silly("copy", source, destination);
+    return GulpStream.src(this.cfg, source).dest(destination);
   }
 }

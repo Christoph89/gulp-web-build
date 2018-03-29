@@ -5,7 +5,7 @@ import * as pathutil from "path";
 import * as stripJsonComments from "strip-json-comments";
 import { Build, log, registeredTasks } from "./index";
 import { VSCodeTask, VSCodeDebugger } from "./vscode-schemas";
-import { MergedStream, GulpTask } from "./def";
+import { MergedStream, GulpTask, BuildCallback } from "./def";
 import { BuildUtil } from "./util";
 
 /** Specifies the config for vs code. */
@@ -155,7 +155,7 @@ export class VSCode
     return this;
   }
 
-  public run(): MergedStream
+  public run(cb: BuildCallback)
   {
     // add launch.json
     if (this.debuggers.length)
@@ -186,7 +186,7 @@ export class VSCode
     }
 
     // run
-    return this.build.run();
+    return this.build.run(cb);
   }
 }
 
@@ -213,7 +213,8 @@ export module VSCodeDebuggers
   {
     // merge environment vars
     env=deepAssign({}, {
-      "TS_NODE_CACHE_DIRECTORY": "${workspaceRoot}/.node"
+      "TS_NODE_CACHE_DIRECTORY": "${workspaceRoot}/.node",
+      "LOG": "debug"
     }, env);
 
     return {

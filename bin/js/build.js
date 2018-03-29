@@ -6,6 +6,7 @@ var pathutil = require("path");
 var deepAssign = require("deep-assign");
 var empty = require("gulp-empty");
 var rename = require("gulp-rename");
+var data = require("gulp-data");
 var sass = require("gulp-sass");
 var javac = require("gulp-javac");
 var uglify = require("gulp-uglify");
@@ -16,35 +17,30 @@ var jmerge = require("gulp-merge-json");
 var tplrender = require("gulp-nunjucks-render");
 var tpldata = require("gulp-data");
 var async = require("async");
+var def_1 = require("./def");
 var util_1 = require("./util");
 var mergeStream = require("merge-stream"); // merge-stream does not support ES6 import
 /** Class for building web applications. */
 var Build = /** @class */ (function () {
-    function Build(cfg, series) {
-        this.staticContent = [];
-        this.tplContent = [];
-        this.jsonContent = [];
-        this.tsContent = [];
-        this.scssContent = [];
-        this.javaContent = [];
+    function Build(cfg) {
+        this.buildContent = [];
         this.vscClassPath = [];
         this.classPath = [];
         if (!cfg)
             cfg = {};
-        this.series = series || new BuildSeries();
-        this.series.add(this);
         this.init(cfg);
     }
     /** Initializes the current build. */
     Build.prototype.init = function (cfg) {
-        this.util = new util_1.BuildUtil(this.cfg = deepAssign({
+        this.cfg = cfg;
+        var clone = deepAssign({}, cfg);
+        this.util = new util_1.BuildUtil(this.cfg = deepAssign(this.cfg, {
             // default config
             // default encoding=utf8
             prj: process.cwd(),
             minify: process.env.minify == "true" || process.argv.indexOf("--dist") > -1,
             sourcemaps: process.env.sourcemaps != "false" && process.argv.indexOf("--dist") == -1
-        }, cfg));
-        this.stream = mergeStream();
+        }, clone));
         var vscodeSettings = cfg.prj ? pathutil.join(cfg.prj, "./.vscode/settings.json") : null;
         if (vscodeSettings && fs.existsSync(vscodeSettings)) {
             var vscSettings = this.vscSettings = this.readJson(vscodeSettings);
@@ -56,67 +52,91 @@ var Build = /** @class */ (function () {
             }
         }
     };
-    /** Adds content statically for copying without any building/parsing/etc. */
     Build.prototype.add = function (src, dest) {
-        this.staticContent.push({ src: src, dest: dest });
+        if (arguments.length == 1)
+            this.buildContent.push(src);
+        else
+            this.buildContent.push({ contentType: def_1.BuildContentType.Static, src: src, dest: dest });
         return this;
     };
-    /** Adds the specified template content. */
     Build.prototype.addTpl = function (src, path, dest, data) {
-        this.tplContent.push({
-            src: src,
-            dest: dest,
-            path: path,
-            data: data
-        });
+        if (arguments.length == 1)
+            this.buildContent.push(src);
+        else
+            this.buildContent.push({
+                contentType: def_1.BuildContentType.Tpl,
+                src: src,
+                dest: dest,
+                path: path,
+                data: data
+            });
         return this;
     };
-    /** Adds json content.
-     * extend -> merges all json files and extends the merged object
-     * base -> takes the base object and merges it with the specified json files
-     * you can use the following vars:
-     * all keys specified in build config
-     * %vscClassPaths = classpaths specified in .vscode settings.json
-     * %classPaths = vscClassPaths + all classpaths specified by addJava
-     */
     Build.prototype.addJson = function (src, dest, extend, base, replaceVars) {
         if (replaceVars === void 0) { replaceVars = true; }
-        this.jsonContent.push({
-            src: src,
-            dest: dest,
-            extend: extend,
-            replaceVars: replaceVars
-        });
+        if (arguments.length == 1)
+            this.buildContent.push(src);
+        else
+            this.buildContent.push({
+                contentType: def_1.BuildContentType.Json,
+                src: src,
+                dest: dest,
+                extend: extend,
+                replaceVars: replaceVars
+            });
         return this;
     };
-    /** Sets the config of the current build. */
-    Build.prototype.setCfg = function (src, extend, base, replaceVars) {
+    /** Extends the config by the specified json file. */
+    Build.prototype.config = function (src, filter, replaceVars) {
         var _this = this;
         if (replaceVars === void 0) { replaceVars = true; }
-        this.addJson(src, function (json, done) {
-            linq.from(_this.series.builds).forEach(function (b) { return b.cfg = json; });
-            done(null, json);
-        }, extend, base, replaceVars);
-        return this.next();
-    };
-    /** Adds typescript content. */
-    Build.prototype.addTs = function (src, js, dts, sourcemap, options) {
-        this.tsContent.push({
+        if (Array.isArray(src)) {
+            var b = this;
+            linq.from(src).forEach(function (x) {
+                b = b.config(x, filter, replaceVars);
+            });
+            return b;
+        }
+        // surround with property?
+        var prop;
+        if (typeof src === "string" && src.indexOf("=") > -1) {
+            var parts = src.split("=");
+            prop = parts[0];
+            src = parts[1];
+        }
+        var content;
+        return this.addJson((content = {
+            contentType: def_1.BuildContentType.Json,
             src: src,
-            js: js,
-            dts: dts,
-            sourcemap: this.extendSourcemapOpts(sourcemap, src, js),
-            options: options
-        });
+            dest: function (file) { return _this.setConfigFromFile(file, content, prop); },
+            filter: filter,
+            replaceVars: replaceVars
+        }));
+    };
+    Build.prototype.addTs = function (src, js, dts, sourcemap, options) {
+        if (arguments.length == 1)
+            this.buildContent.push(src);
+        else
+            this.buildContent.push({
+                contentType: def_1.BuildContentType.Typescript,
+                src: src,
+                js: js,
+                dts: dts,
+                sourcemap: sourcemap,
+                options: options
+            });
         return this;
     };
-    /** Adds scss content. */
     Build.prototype.addScss = function (src, css, sourcemap) {
-        this.scssContent.push({
-            src: src,
-            css: css,
-            sourcemap: this.extendSourcemapOpts(sourcemap, src, css)
-        });
+        if (arguments.length == 1)
+            this.buildContent.push(src);
+        else
+            this.buildContent.push({
+                contentType: def_1.BuildContentType.Scss,
+                src: src,
+                css: css,
+                sourcemap: sourcemap
+            });
         return this;
     };
     Build.prototype.addJava = function (src, jar, classpath, options) {
@@ -124,7 +144,8 @@ var Build = /** @class */ (function () {
         if (typeof classpath == "string")
             classpath = [classpath]; // ensure array
         classpath = this.resolveClassPath(classpath);
-        this.javaContent.push({
+        this.buildContent.push({
+            contentType: def_1.BuildContentType.Java,
             src: src,
             jar: jar,
             classPath: this.vscClassPath.concat(classpath || []),
@@ -156,50 +177,55 @@ var Build = /** @class */ (function () {
         return util_1.BuildUtil.readJson(path, this.cfg);
     };
     /** Runs the web build. */
-    Build.prototype.run = function (series_cb) {
-        var _this = this;
-        // run series
-        if (series_cb) {
-            this.series.run(series_cb);
-            return null;
-        }
-        // copy static content
-        if (this.staticContent.length) {
-            util_1.log.info("copy static content");
-            linq.from(this.staticContent).forEach(function (x) { return _this.copyStatic(x); });
-        }
-        // render templates
-        if (this.tplContent.length) {
-            util_1.log.info("render template content");
-            linq.from(this.tplContent).forEach(function (x) { return _this.renderTpl(x); });
-        }
-        // copy/merge json content
-        if (this.jsonContent.length) {
-            util_1.log.info("copy json content");
-            linq.from(this.jsonContent).forEach(function (x) { return _this.mergeJson(x, _this.getJsonVars()); });
-        }
-        // build ts
-        if (this.tsContent.length) {
-            util_1.log.info("build typescript");
-            linq.from(this.tsContent).forEach(function (x) { return _this.buildTs(x); });
-        }
-        // build scss
-        if (this.scssContent.length) {
-            util_1.log.info("build scss");
-            linq.from(this.scssContent).forEach(function (x) { return _this.buildScss(x); });
-        }
-        // build java
-        if (this.javaContent.length) {
-            util_1.log.info("build java");
-            linq.from(this.javaContent).forEach(function (x) { return _this.buildJava(x); });
-        }
-        return this.stream;
+    Build.prototype.run = function (cb) {
+        util_1.log.verbose("[START BUILD]");
+        var build = this;
+        async.series(linq.from(this.buildContent)
+            .select(function (content, idx) {
+            return function (next) {
+                var stream = build.createStream(content);
+                if (stream) {
+                    util_1.log.verbose("[START] " + stream.logMsg, stream.meta);
+                    stream.on("finish", function (err, res) {
+                        util_1.log.verbose("[FINISHED] " + stream.logMsg, stream.meta);
+                        next(err, res);
+                    })
+                        .on("error", function (err) {
+                        util_1.log.error(err);
+                        next(err);
+                    });
+                }
+                else {
+                    util_1.log.warn("[SKIPPED] undefined stream!");
+                    next(undefined, undefined);
+                }
+            };
+        }).toArray(), function (err) {
+            util_1.log.verbose("[FINISHED BUILD]");
+            if (cb)
+                return cb(err);
+        });
     };
-    Build.prototype.next = function () {
-        return new Build(this.cfg, this.series);
+    Build.prototype.createStream = function (content) {
+        switch (content.contentType) {
+            case def_1.BuildContentType.Static: return this.copyStatic(content);
+            case def_1.BuildContentType.Tpl: return this.renderTpl(content);
+            case def_1.BuildContentType.Json: return this.mergeJson(content);
+            case def_1.BuildContentType.Typescript: return this.buildTs(content);
+            case def_1.BuildContentType.Scss: return this.buildScss(content);
+            case def_1.BuildContentType.Java: return this.buildJava(content);
+        }
+        return null;
+    };
+    Build.prototype.extStream = function (source, logMsg, content) {
+        if (source && (!source.isEmpty || !source.isEmpty())) {
+            source.logMsg = logMsg || "";
+            source.meta = deepAssign(source.meta || {}, { content: content });
+        }
+        return source;
     };
     Build.prototype.copyStatic = function (content) {
-        this.stream.add(this.util.copy(content.src, content.dest));
+        return this.extStream(this.util.copy(content.src, content.dest), "copy", content);
     };
     Build.prototype.renderTpl = function (content) {
         if (!content.data)
@@ -207,12 +233,14 @@ var Build = /** @class */ (function () {
         var getData = typeof content.data == "function"
             ? function (f) { return content.data(f, content); }
             : function (f) { return content.data; };
-        this.stream.add(this.util.src(content.src)
+        return this.extStream(this.util.src(content.src)
             .pipe(tpldata(getData))
-            .pipe(tplrender({ path: content.path }))
-            .dest(content.dest));
+            .pipe(tplrender({ path: this.resolve(content.path) }))
+            .dest(content.dest), "render tpl", content);
     };
     Build.prototype.extendSourcemapOpts = function (opts, src, dest) {
+        if (!src || !dest)
+            return null;
         var srcDir = (this.util.getPath(this.dir(src)) || [])[0];
         var destDir = (this.util.getPath(this.dir(dest)) || [])[0];
         return deepAssign({
@@ -239,12 +267,12 @@ var Build = /** @class */ (function () {
         return empty();
     };
     Build.prototype.sourcemapsInit = function (opt) {
-        if (this.cfg.sourcemaps)
+        if (this.cfg.sourcemaps && opt)
             return sourcemaps.init(opt);
         return empty();
     };
     Build.prototype.sourcemapsWrite = function (opt) {
-        if (this.cfg.sourcemaps)
+        if (this.cfg.sourcemaps && opt)
             return sourcemaps.write(opt.dest, opt);
         return empty();
     };
@@ -258,32 +286,69 @@ var Build = /** @class */ (function () {
             return rename(pathutil.basename(path));
         return empty();
     };
-    Build.prototype.getJsonVars = function () {
-        if (!this.jsonVars)
-            this.jsonVars = deepAssign({}, this.cfg, {
-                "vscClassPath": this.vscClassPath,
-                "classPath": linq.from(this.classPath).orderBy(function (x) { return x; }).toArray()
-            });
-        return this.jsonVars;
-    };
-    Build.prototype.mergeJson = function (content, vars) {
-        util_1.log.verbose("merge json " + JSON.stringify(content) + "(vars " + JSON.stringify(vars) + ")");
-        // get filename
-        var fileName = pathutil.basename((typeof content.dest == "string") && pathutil.extname(content.dest) ? content.dest : content.src);
-        // get result map
-        if (typeof content.dest == "function") {
-            var map = content.dest;
-            content.dest = function (file, done) {
-                var json = JSON.parse(file.contents.toString());
-                map(json, done);
-            };
+    Build.prototype.setConfigFromFile = function (file, content, prop) {
+        util_1.log.verbose("set config", content);
+        // get json from file
+        var jstr = String(file.contents);
+        var json = JSON.parse(jstr);
+        // wrap json into property
+        if (prop) {
+            var h = {};
+            h[prop] = json;
+            json = h;
         }
+        deepAssign(this.cfg, json);
+        util_1.log.verbose("config set", this.cfg);
+        return file;
+    };
+    Build.prototype.filterJson = function (filter) {
+        var _this = this;
+        if (filter && !Array.isArray(filter))
+            filter = [filter];
+        if (filter && filter.length) {
+            if (typeof filter[0] == "string")
+                filter = [filter];
+            return data(function (file) {
+                var json = JSON.parse(String(file.contents));
+                linq.from(filter).forEach(function (f) {
+                    if (typeof f == "function")
+                        json = f(json);
+                    else {
+                        var filtered = {};
+                        linq.from(f).forEach(function (prop) {
+                            if (prop[0] == "<")
+                                deepAssign(filtered, json[prop.substr(1)]);
+                            else
+                                filtered[prop] = json[prop];
+                        });
+                        json = filtered;
+                    }
+                });
+                file.contents = new Buffer(JSON.stringify(json, null, _this.cfg.minify ? "" : "  "));
+                return json;
+            });
+        }
+        return empty();
+    };
+    Build.prototype.getJsonVars = function (vars) {
+        return deepAssign({}, this.cfg, {
+            "vscClassPath": this.vscClassPath,
+            "classPath": linq.from(this.classPath).orderBy(function (x) { return x; }).toArray()
+        }, vars);
+    };
+    Build.prototype.mergeJson = function (content) {
+        var _this = this;
+        // get source
         var src;
+        if (typeof content.src == "function")
+            content.src = content.src(this);
         if (typeof content.src == "string" || Array.isArray(content.src))
             src = this.util.src(content.src);
         else
             src = this.util.contentSrc(content.src);
-        this.stream.add(src
+        // get filename
+        var fileName = pathutil.basename(typeof content.dest == "string" && pathutil.extname(content.dest) ? content.dest : (typeof content.src == "string" ? content.src : "tmp.txt"));
+        return this.extStream(src
             .pipe(jmerge({
             fileName: fileName,
             startObj: content.base,
@@ -291,7 +356,7 @@ var Build = /** @class */ (function () {
             jsonSpace: this.cfg.minify ? "" : "  ",
             jsonReplacer: content.replaceVars ? function (key, val) {
                 if (typeof val == "string") {
-                    var list = util_1.BuildUtil.replaceVars(val, vars);
+                    var list = util_1.BuildUtil.replaceVars(val, _this.getJsonVars(content.vars));
                     if (list.length > 1)
                         return list;
                     return list[0];
@@ -299,7 +364,8 @@ var Build = /** @class */ (function () {
                 return val;
             } : null
         }))
-            .dest(content.dest));
+            .pipe(this.filterJson(content.filter))
+            .dest(content.dest), "merge json", content);
     };
     Build.prototype.buildTs = function (content) {
         // get config
@@ -310,35 +376,43 @@ var Build = /** @class */ (function () {
         // set declaration
         if (content.dts)
             content.options.declaration = true;
-        // log
-        util_1.log.verbose("build ts " + JSON.stringify(content));
+        // set sourcemap options
+        if (content.sourcemap)
+            content.sourcemap = this.extendSourcemapOpts(content.sourcemap, content.src, content.js);
         // compile ts
         var ts = this.util.src(content.src)
             .pipe(this.sourcemapsInit(content.sourcemap))
             .pipe(typescript(content.options)).stream;
+        var tsStream = this.extStream(ts, "build ts", content);
         // minify and save js
-        if (ts.js && content.js)
-            this.stream.add(this.util.extend(ts.js)
+        if (ts && ts.js && content.js)
+            this.util.extend(ts.js, ts.meta)
                 .pipe(this.minifyJs())
                 .pipe(this.sourcemapsWrite(content.sourcemap))
-                .dest(this.dir(content.js)));
+                .dest(this.dir(content.js)).on("finish", function () {
+                util_1.log.silly("FINISHED ts-js");
+            });
         // save dts
-        if (ts.dts && content.dts)
-            this.stream.add(this.util.extend(ts.dts)
+        if (ts && ts.dts && content.dts)
+            this.util.extend(ts.dts, ts.meta)
                 .pipe(this.rename(content.dts))
-                .dest(this.dir(content.dts)));
+                .dest(this.dir(content.dts)).on("finish", function () {
+                util_1.log.silly("FINISHED dts");
+            });
+        return tsStream;
     };
     Build.prototype.buildScss = function (content) {
-        // log
-        util_1.log.verbose("build scss " + JSON.stringify(content));
+        // set sourcemap options
+        if (content.sourcemap)
+            content.sourcemap = this.extendSourcemapOpts(content.sourcemap, content.src, content.css);
         // compile scss
-        this.stream.add(this.util.src(content.src)
+        return this.extStream(this.util.src(content.src)
             .pipe(this.sourcemapsInit(content.sourcemap))
             .pipe(sass().on("error", sass.logError))
             .pipe(this.minifyCss())
             .pipe(this.rename(content.css))
             .pipe(this.sourcemapsWrite(content.sourcemap))
-            .dest(this.dir(content.css)));
+            .dest(this.dir(content.css)), "build scss", content);
     };
     Build.prototype.javac = function (jar, opt, libs) {
         var res = javac(pathutil.basename(jar), opt);
@@ -349,36 +423,11 @@ var Build = /** @class */ (function () {
     Build.prototype.buildJava = function (content) {
         // get options
         content.options = deepAssign({}, this.cfg.javac, content.options);
-        // log
-        util_1.log.verbose("build java " + JSON.stringify(content));
         // compile java
-        this.stream.add(this.util.src(content.src)
+        return this.extStream(this.util.src(content.src)
             .pipe(this.javac(content.jar, content.options, content.classPath))
-            .dest(pathutil.dirname(content.jar)));
+            .dest(pathutil.dirname(content.jar)), "build java", content);
     };
     return Build;
 }());
 exports.Build = Build;
-/** Defines a build series. */
-var BuildSeries = /** @class */ (function () {
-    /** Initializes a new instance. */
-    function BuildSeries(builds) {
-        this.builds = builds || [];
-    }
-    /** Adds the specified build. */
-    BuildSeries.prototype.add = function (build) {
-        this.builds.push(build);
-    };
-    /** Runs the series. */
-    BuildSeries.prototype.run = function (cb) {
-        async.series(linq.from(this.builds || []).select(function (b) {
-            return function (next) {
-                b.run().on("end", next);
-            };
-        }).toArray(), cb);
-    };
-    return BuildSeries;
-}());
-exports.BuildSeries = BuildSeries;
-
-//# sourceMappingURL=build.js.map

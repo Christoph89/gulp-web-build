@@ -139,7 +139,7 @@ var VSCode = /** @class */ (function () {
         this.exclude.apply(this, paths);
         return this;
     };
-    VSCode.prototype.run = function () {
+    VSCode.prototype.run = function (cb) {
         // add launch.json
         if (this.debuggers.length) {
             index_1.log.info("add debuggers to .vscode/launch.json");
@@ -163,7 +163,7 @@ var VSCode = /** @class */ (function () {
             this.build.addJson({}, path, this.settings);
         }
         // run
-        return this.build.run();
+        return this.build.run(cb);
     };
     VSCode.launchJsonVersion = "0.2.0";
     VSCode.tasksJsonVersion = "2.0.0";
@@ -195,7 +195,8 @@ var VSCodeDebuggers;
     function Node(name, js, args, env) {
         // merge environment vars
         env = deepAssign({}, {
-            "TS_NODE_CACHE_DIRECTORY": "${workspaceRoot}/.node"
+            "TS_NODE_CACHE_DIRECTORY": "${workspaceRoot}/.node",
+            "LOG": "debug"
         }, env);
         return {
             type: "node",
@@ -236,5 +237,3 @@ var VSCodeDebuggers;
     }
     VSCodeDebuggers.NodeWebApplication = NodeWebApplication;
 })(VSCodeDebuggers = exports.VSCodeDebuggers || (exports.VSCodeDebuggers = {}));
-
-//# sourceMappingURL=vscode.js.map

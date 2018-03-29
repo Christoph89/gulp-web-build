@@ -6,9 +6,12 @@ import { BuildConfig, GulpTask } from "./def";
 import { GulpStream } from "./stream";
 import { TaskFunction } from "undertaker";
 export declare var log: winston.LoggerInstance;
+export declare function logMeta(writeMeta: (logLevel: string, curLevel: string, meta: any) => string): void;
 export declare function task(name: string, fn: TaskFunction): any;
-export declare function task(name: string, dependencies: string[], fn: TaskFunction): any;
+export declare function task(name: string, dependencies: string[], fn?: TaskFunction): any;
 export declare function task(t: GulpTask, fn: TaskFunction): any;
+/** Returns a dependency series */
+export declare function series(...tasks: string[]): string[];
 /** Runs the specified task synchronously. */
 export declare function runTask(name: string, ...args: string[]): void;
 /** Returns all registered tasks. */
@@ -35,11 +38,11 @@ export declare class BuildUtil {
     /** Reads the specified json file. */
     static readJson(path: string, vars?: any): any;
     /** Extends the specified stream. */
-    extend(stream: NodeJS.ReadWriteStream): GulpStream;
+    extend(stream: NodeJS.ReadWriteStream, meta?: any): GulpStream;
     /** Return the source stream for the specified path. */
     src(path: string | string[]): GulpStream;
     /** Return the source stream for the specified content. */
     contentSrc(content: any): GulpStream;
     /** Copies the specified source(s) to the specified desination(s). */
-    copy(source: string | string[], destination: string | string[]): any;
+    copy(source: string | string[], destination: string | string[]): NodeJS.ReadWriteStream;
 }

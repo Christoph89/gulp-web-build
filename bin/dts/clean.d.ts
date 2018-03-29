@@ -1,3 +1,4 @@
+import { BuildCallback } from "./def";
 /** Specifies utitilies to clean a project. */
 export declare class Clean {
     private paths;
@@ -9,5 +10,5 @@ export declare class Clean {
     /** Deletes all files excluded from vs code but leaves the specified paths. */
     delVSCodeExcludes(...leave: string[]): Clean;
     /** Deletes all specified paths. */
-    run(): any;
+    run(cb: BuildCallback): any;
 }

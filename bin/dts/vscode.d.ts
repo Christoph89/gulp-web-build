@@ -1,5 +1,5 @@
 import { VSCodeTask, VSCodeDebugger } from "./vscode-schemas";
-import { MergedStream, GulpTask } from "./def";
+import { GulpTask, BuildCallback } from "./def";
 /** Specifies the config for vs code. */
 export interface VSCodeConfig {
     /** Specifies the project directory. */
@@ -32,7 +32,7 @@ export declare class VSCode {
     exclude(...paths: (string | string[])[]): VSCode;
     /** Excludes all paths from .gitignore from vs code.*/
     excludeGitIgnores(): VSCode;
-    run(): MergedStream;
+    run(cb: BuildCallback): void;
 }
 /** Contains debuggers. */
 export declare module VSCodeDebuggers {

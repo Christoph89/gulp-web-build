@@ -1,7 +1,7 @@
 import * as sh from "shelljs";
 import * as $linq from "linq";
-export { BuildConfig, MergedStream, JavacOptions, SourcemapOptions, GulpTask } from "./def";
-export { BuildUtil, log, task, runTask, registeredTasks, zip } from "./util";
+export { BuildConfig, BuildCallback, MergedStream, JavacOptions, SourcemapOptions, GulpTask, StaticContent, TplContent, JsonContent, TSContent, SCSSContent, JavaContent, DestinationMap } from "./def";
+export { BuildUtil, log, logMeta, task, runTask, series, registeredTasks, zip } from "./util";
 export { Build } from "./build";
 export { Clean } from "./clean";
 export { VSCode, VSCodeConfig, VSCodeDebuggers } from "./vscode";

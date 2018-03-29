@@ -1,28 +1,24 @@
 import * as typescript from "gulp-typescript";
-import { BuildConfig, MergedStream, JavacOptions, SourcemapOptions, TplContent, JsonResultMap } from "./def";
+import { BuildConfig, StaticContent, JsonContent, TSContent, SCSSContent, JavacOptions, SourcemapOptions, TplContent, JsonFilter, BuildCallback } from "./def";
 import { BuildUtil } from "./util";
 /** Class for building web applications. */
 export declare class Build {
     cfg: BuildConfig;
     util: BuildUtil;
-    private series;
-    private stream;
-    private staticContent;
-    private tplContent;
-    private jsonContent;
-    private tsContent;
-    private scssContent;
-    private javaContent;
+    name: string;
+    private buildContent;
     private vscClassPath;
     private classPath;
     private jsonVars;
     vscSettings: any;
-    constructor(cfg?: BuildConfig, series?: BuildSeries);
+    constructor(cfg?: BuildConfig);
     /** Initializes the current build. */
     private init(cfg);
     /** Adds content statically for copying without any building/parsing/etc. */
+    add(content: StaticContent): Build;
     add(src: string | string[], dest: string | string[]): Build;
     /** Adds the specified template content. */
+    addTpl(content: TplContent): Build;
     addTpl(src: string | string[], path: string | string[], dest: string | string[], data?: any | ((file: any, content: TplContent) => any)): Build;
     /** Adds json content.
      * extend -> merges all json files and extends the merged object
@@ -32,25 +28,29 @@ export declare class Build {
      * %vscClassPaths = classpaths specified in .vscode settings.json
      * %classPaths = vscClassPaths + all classpaths specified by addJava
      */
-    addJson(src: string | any, dest: string | JsonResultMap, extend?: any, base?: any, replaceVars?: boolean): Build;
-    /** Sets the config of the current build. */
-    setCfg(src: string | any, extend?: any, base?: any, replaceVars?: boolean): Build;
+    addJson(content: JsonContent): Build;
+    addJson(src: string | any, dest: string | any, extend?: any, base?: any, replaceVars?: boolean): Build;
+    /** Extends the config by the specified json file. */
+    config(src: string | string[] | any, filter?: string[] | JsonFilter | (string[] | JsonFilter)[], replaceVars?: boolean): Build;
     /** Adds typescript content. */
+    addTs(content: TSContent): Build;
     addTs(src: string, js: string, dts?: string, sourcemap?: SourcemapOptions, options?: typescript.Settings): Build;
     /** Adds scss content. */
+    addScss(content: SCSSContent): Build;
     addScss(src: string, css: string, sourcemap?: SourcemapOptions): Build;
     addJava(src: string, jar: string, classpath?: string | string[], options?: JavacOptions): Build;
     /** Resolve the specified path */
-    resolve(path: string): string[];
+    resolve(path: string | string[]): string[];
     /** Resolves the specified path. */
-    resolveFirst(path: string): string;
+    resolveFirst(path: string | string[]): string;
     /** Reads the specified file. */
     read(path: string): string;
     /** Reads the specified json file. */
     readJson(path: string): any;
     /** Runs the web build. */
-    run(series_cb?: (error?: any) => void): MergedStream;
-    next(): Build;
+    run(cb: BuildCallback): void;
+    private createStream(content);
+    private extStream(source, logMsg, content);
     private copyStatic(content);
     private renderTpl(content);
     private extendSourcemapOpts(opts, src, dest);
@@ -61,21 +61,12 @@ export declare class Build {
     private sourcemapsWrite(opt);
     private dir(path);
     private rename(path);
-    private getJsonVars();
-    private mergeJson(content, vars);
+    private setConfigFromFile(file, content, prop?);
+    private filterJson(filter);
+    private getJsonVars(vars?);
+    private mergeJson(content);
     private buildTs(content);
     private buildScss(content);
     private javac(jar, opt, libs);
     private buildJava(content);
-}
-/** Defines a build series. */
-export declare class BuildSeries {
-    /** Initializes a new instance. */
-    constructor(builds?: Build[]);
-    /** The builds of the series. */
-    builds: Build[];
-    /** Adds the specified build. */
-    add(build: Build): void;
-    /** Runs the series. */
-    run(cb: (error?: any) => void): void;
 }

@@ -4,7 +4,6 @@ var del = require("del");
 var linq = require("linq");
 var index_1 = require("./index");
 var util_1 = require("./util");
-var mergeStream = require("merge-stream"); // merge-stream does not support ES6 import
 /** Specifies utitilies to clean a project. */
 var Clean = /** @class */ (function () {
     /** Initializes a new instance. */
@@ -38,13 +37,12 @@ var Clean = /** @class */ (function () {
         var _a;
     };
     /** Deletes all specified paths. */
-    Clean.prototype.run = function () {
+    Clean.prototype.run = function (cb) {
         return del(this.paths, { force: true }).then(function (paths) {
             index_1.log.info("Deleted " + (paths || []).length + " file(s). " + JSON.stringify(paths, null, "  "));
+            cb();
         });
     };
     return Clean;
 }());
 exports.Clean = Clean;
-
-//# sourceMappingURL=clean.js.map

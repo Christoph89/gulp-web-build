@@ -5,8 +5,10 @@ var $linq = require("linq");
 var util_1 = require("./util");
 exports.BuildUtil = util_1.BuildUtil;
 exports.log = util_1.log;
+exports.logMeta = util_1.logMeta;
 exports.task = util_1.task;
 exports.runTask = util_1.runTask;
+exports.series = util_1.series;
 exports.registeredTasks = util_1.registeredTasks;
 exports.zip = util_1.zip;
 var build_1 = require("./build");
@@ -20,5 +22,3 @@ exports.shell = sh;
 exports.merge = require("deep-assign");
 exports.linq = $linq;
 exports.q = $linq.from;
-
-//# sourceMappingURL=index.js.map

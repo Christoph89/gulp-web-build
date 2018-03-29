@@ -2,8 +2,10 @@ import * as fs from "fs";
 import * as linq from "linq";
 import * as pathutil from "path";
 import * as deepAssign from "deep-assign";
+import * as gulp from "gulp";
 import * as empty from "gulp-empty";
 import * as rename from "gulp-rename";
+import * as data from "gulp-data";
 import * as sass from "gulp-sass";
 import * as javac from "gulp-javac";
 import * as uglify from "gulp-uglify";
@@ -15,10 +17,11 @@ import * as file from "gulp-file";
 import * as tplrender from "gulp-nunjucks-render";
 import * as tpldata from "gulp-data";
 import * as async from "async"; 
-import { BuildConfig, MergedStream, StaticContent, JsonContent, 
-         TSContent, SCSSContent, JavaContent, JavacOptions, SourcemapOptions, TplContent, ResultMap, JsonResultMap } from "./def";
+import { BuildConfig, MergedStream, ReadWriteStreamExt, StaticContent, JsonContent, 
+         TSContent, SCSSContent, JavaContent, JavacOptions, SourcemapOptions, TplContent, JsonFilter, BuildCallback, BuildContent, BuildContentType } from "./def";
 import { BuildUtil, log } from "./util";
 import { GulpStream } from "./stream";
+import { TsConfig } from "gulp-typescript/release/types";
 var mergeStream=require("merge-stream"); // merge-stream does not support ES6 import
 
 /** Class for building web applications. */
@@ -26,38 +29,31 @@ export class Build
 {
   public cfg: BuildConfig;
   public util: BuildUtil;
-  private series: BuildSeries;
-  private stream: MergedStream;
-  private staticContent: StaticContent[]=[];
-  private tplContent: TplContent[]=[];
-  private jsonContent: JsonContent[]=[];
-  private tsContent: TSContent[]=[];
-  private scssContent: SCSSContent[]=[];
-  private javaContent: JavaContent[]=[];
+  public name: string;
+  private buildContent: BuildContent[]=[];
   private vscClassPath: string[]=[];
   private classPath: string[]=[];
   private jsonVars: any;
   public vscSettings: any;
 
-  public constructor(cfg?: BuildConfig, series?: BuildSeries)
+  public constructor(cfg?: BuildConfig)
   {
     if (!cfg) cfg={};
-    this.series=series || new BuildSeries();
-    this.series.add(this);
     this.init(cfg);
   }
 
   /** Initializes the current build. */
   private init(cfg: BuildConfig)
   {
-    this.util=new BuildUtil(this.cfg=deepAssign(<BuildConfig> {
+    this.cfg=cfg;
+    var clone=deepAssign({}, cfg);
+    this.util=new BuildUtil(this.cfg=deepAssign(this.cfg, <BuildConfig> {
       // default config
       // default encoding=utf8
       prj: process.cwd(),
       minify: process.env.minify=="true" || process.argv.indexOf("--dist")>-1,
       sourcemaps: process.env.sourcemaps!="false" && process.argv.indexOf("--dist")==-1
-    }, cfg));
-    this.stream=mergeStream();
+    }, clone));
 
     var vscodeSettings=cfg.prj?pathutil.join(cfg.prj, "./.vscode/settings.json"):null;
     if (vscodeSettings && fs.existsSync(vscodeSettings))
@@ -74,21 +70,32 @@ export class Build
   }
 
   /** Adds content statically for copying without any building/parsing/etc. */
-  public add(src: string|string[], dest: string|string[]): Build
+  public add(content: StaticContent): Build;
+  public add(src: string|string[], dest: string|string[]): Build;
+  public add(src: StaticContent|string|string[], dest?: string|string[]): Build
   {
-    this.staticContent.push({ src: src, dest: dest });
+    if (arguments.length==1)
+      this.buildContent.push(<StaticContent>src);
+    else
+      this.buildContent.push(<StaticContent>{ contentType: BuildContentType.Static, src: <string|string[]>src, dest: dest });
     return this;
   }
 
   /** Adds the specified template content. */
-  public addTpl(src: string|string[], path: string|string[], dest: string|string[], data?: any|((file: any, content: TplContent) => any)): Build
+  public addTpl(content: TplContent): Build;
+  public addTpl(src: string|string[], path: string|string[], dest: string|string[], data?: any|((file: any, content: TplContent) => any)): Build;
+  public addTpl(src: TplContent|string|string[], path?: string|string[], dest?: string|string[], data?: any|((file: any, content: TplContent) => any)): Build
   {
-    this.tplContent.push({ 
-      src: src, 
-      dest: dest,
-      path: path,
-      data: data
-    });
+    if (arguments.length==1)
+      this.buildContent.push(<TplContent>src);
+    else
+      this.buildContent.push(<TplContent>{ 
+        contentType: BuildContentType.Tpl,
+        src: <string|string[]>src, 
+        dest: dest,
+        path: path,
+        data: data
+      });
     return this;
   }
 
@@ -100,49 +107,88 @@ export class Build
    * %vscClassPaths = classpaths specified in .vscode settings.json
    * %classPaths = vscClassPaths + all classpaths specified by addJava
    */
-  public addJson(src: string|any, dest: string|JsonResultMap, extend?: any, base?: any, replaceVars: boolean=true): Build
+  public addJson(content: JsonContent): Build;
+  public addJson(src: string|any, dest: string|any, extend?: any, base?: any, replaceVars?: boolean): Build;
+  public addJson(src: JsonContent|string|any, dest?: string|any, extend?: any, base?: any, replaceVars: boolean=true): Build
   {
-    this.jsonContent.push({ 
-      src: src, 
-      dest: dest, 
-      extend: extend, 
-      replaceVars: replaceVars 
-    });
+    if (arguments.length==1)
+      this.buildContent.push(<JsonContent>src);
+    else
+      this.buildContent.push(<JsonContent>{ 
+        contentType: BuildContentType.Json,
+        src: src, 
+        dest: dest, 
+        extend: extend, 
+        replaceVars: replaceVars 
+      });
     return this;
   }
 
-  /** Sets the config of the current build. */
-  public setCfg(src: string|any, extend?: any, base?: any, replaceVars: boolean=true)
+  /** Extends the config by the specified json file. */
+  public config(src: string|string[]|any, filter?: string[] | JsonFilter | (string[] | JsonFilter)[], replaceVars: boolean=true): Build
   {
-    this.addJson(src, (json, done) => 
+    if (Array.isArray(src))
     {
-      linq.from(this.series.builds).forEach(b => b.cfg=json);
-      done(null, json);
-    }, extend, base, replaceVars);
-    return this.next();
+      var b: Build=this;
+      linq.from(<string[]>src).forEach(x => 
+        { 
+          b=b.config(x, filter, replaceVars); 
+        });
+      return b;
+    }
+
+    // surround with property?
+    var prop;
+    if (typeof src==="string" && src.indexOf("=")>-1)
+    {
+      var parts=src.split("=");
+      prop=parts[0];
+      src=parts[1];
+    }
+
+    var content: JsonContent;
+    return this.addJson(<JsonContent>(content={
+      contentType: BuildContentType.Json,
+      src: src,
+      dest: (file) => { return this.setConfigFromFile(file, content, prop); },
+      filter: filter,
+      replaceVars: replaceVars
+    }));
   }
 
   /** Adds typescript content. */
-  public addTs(src: string, js: string, dts?: string, sourcemap?: SourcemapOptions, options?: typescript.Settings): Build
+  public addTs(content: TSContent): Build;
+  public addTs(src: string, js: string, dts?: string, sourcemap?: SourcemapOptions, options?: typescript.Settings): Build;
+  public addTs(src: TSContent|string, js?: string, dts?: string, sourcemap?: SourcemapOptions, options?: typescript.Settings): Build
   {
-    this.tsContent.push({ 
-      src: src, 
-      js: js, 
-      dts: dts, 
-      sourcemap: this.extendSourcemapOpts(sourcemap, src, js),
-      options: options 
-    });
+    if (arguments.length==1)
+      this.buildContent.push(<TSContent>src);
+    else
+      this.buildContent.push(<TSContent>{ 
+        contentType: BuildContentType.Typescript,
+        src: <string>src, 
+        js: js, 
+        dts: dts, 
+        sourcemap: sourcemap,
+        options: options 
+      });
     return this;
   }
 
   /** Adds scss content. */
-  public addScss(src: string, css: string, sourcemap?: SourcemapOptions,): Build
+  public addScss(content: SCSSContent): Build;
+  public addScss(src: string, css: string, sourcemap?: SourcemapOptions): Build;
+  public addScss(src: SCSSContent|string, css?: string, sourcemap?: SourcemapOptions): Build
   {
-    this.scssContent.push({ 
-      src: src, 
-      css: css,
-      sourcemap: this.extendSourcemapOpts(sourcemap, src, css)
-    });
+    if (arguments.length==1)
+      this.buildContent.push(<SCSSContent>src);
+    else
+      this.buildContent.push(<SCSSContent>{ 
+        contentType: BuildContentType.Scss,
+        src: <string>src, 
+        css: css,
+        sourcemap: sourcemap
+      });
     return this;
   }
 
@@ -152,7 +198,8 @@ export class Build
     if (typeof classpath=="string") classpath=[classpath]; // ensure array
     classpath=this.resolveClassPath(classpath);
 
-    this.javaContent.push({
+    this.buildContent.push(<JavaContent>{
+      contentType: BuildContentType.Java,
       src: src,
       jar: jar,
       classPath: this.vscClassPath.concat(classpath||[]), // concat with vsc classpaths
@@ -171,13 +218,13 @@ export class Build
   }
 
   /** Resolve the specified path */
-  public resolve(path: string): string[]
+  public resolve(path: string|string[]): string[]
   {
     return this.util.getPath(path);
   }
 
   /** Resolves the specified path. */
-  public resolveFirst(path: string): string
+  public resolveFirst(path: string|string[]): string
   {
     return (this.util.getPath(path)||[])[0];
   }
@@ -195,68 +242,70 @@ export class Build
   }
 
   /** Runs the web build. */
-  public run(series_cb?: (error?: any) => void): MergedStream
+  public run(cb: BuildCallback): void
   {
-    // run series
-    if (series_cb)
-    {
-      this.series.run(series_cb);
-      return null;
-    }
-
-    // copy static content
-    if (this.staticContent.length)
-    {
-      log.info("copy static content");
-      linq.from(this.staticContent).forEach(x => this.copyStatic(x));
-    }
-
-    // render templates
-    if (this.tplContent.length)
-    {
-      log.info("render template content");
-      linq.from(this.tplContent).forEach(x => this.renderTpl(x));
-    }
-
-    // copy/merge json content
-    if (this.jsonContent.length)
-    {
-      log.info("copy json content");
-      linq.from(this.jsonContent).forEach(x => this.mergeJson(x, this.getJsonVars()));
-    }
-
-    // build ts
-    if (this.tsContent.length)
+    log.verbose("[START BUILD]");
+    var build=this;
+    async.series(linq.from(this.buildContent)
+      .select((content, idx) => 
       {
-      log.info("build typescript");
-      linq.from(this.tsContent).forEach(x => this.buildTs(x));
-    }
-
-    // build scss
-    if (this.scssContent.length)
-    {
-      log.info("build scss");
-      linq.from(this.scssContent).forEach(x => this.buildScss(x));
-    }
-
-    // build java
-    if (this.javaContent.length)
-    {
-      log.info("build java");
-      linq.from(this.javaContent).forEach(x => this.buildJava(x));
-    }
-
-    return this.stream;
+        return function (next)
+        {
+          var stream=build.createStream(content);
+          if (stream)
+          {
+            log.verbose("[START] "+stream.logMsg, stream.meta);
+            stream.on("finish", (err, res) => 
+            {
+              log.verbose("[FINISHED] "+stream.logMsg, stream.meta);
+              next(err, res);
+            })
+            .on("error", (err) => 
+            {
+              log.error(err);
+              next(err);
+            });
+          }
+          else
+          {
+            log.warn("[SKIPPED] undefined stream!");
+            next(undefined, undefined);
+          }
+        };
+      }).toArray(), (err) =>
+      {
+        log.verbose("[FINISHED BUILD]")
+        if (cb) return cb(err);
+      });
   }
 
-  public next(): Build
+  private createStream(content: BuildContent): ReadWriteStreamExt
   {
-    return new Build(this.cfg, this.series);
+    switch (content.contentType)
+    {
+      case BuildContentType.Static: return this.copyStatic(<StaticContent>content);
+      case BuildContentType.Tpl: return this.renderTpl(<TplContent>content);
+      case BuildContentType.Json: return this.mergeJson(<JsonContent>content);
+      case BuildContentType.Typescript: return this.buildTs(<TSContent>content);
+      case BuildContentType.Scss: return this.buildScss(<SCSSContent>content);
+      case BuildContentType.Java: return this.buildJava(<JavaContent>content);
+    }
+    return null;
+  }
+
+  private extStream(source: any, logMsg: string, content: BuildContent): ReadWriteStreamExt
+  {
+    if (source && (!source.isEmpty || !source.isEmpty()))
+    {
+      source.logMsg=logMsg||"";
+      source.meta=deepAssign(source.meta||{}, { content: content });
+    }
+    return source;
   }
 
   private copyStatic(content: StaticContent)
   {
-    this.stream.add(this.util.copy(content.src, content.dest));
+    return this.extStream(this.util.copy(content.src, content.dest), "copy", content);
   }
 
   private renderTpl(content: TplContent)
@@ -265,14 +314,16 @@ export class Build
     var getData=typeof content.data=="function"
       ?function (f) { return content.data(f, content); }
       :function (f){ return content.data; };
-    this.stream.add(this.util.src(content.src)
+    return this.extStream(this.util.src(content.src)
       .pipe(tpldata(getData))
-      .pipe(tplrender({ path: content.path }))
-      .dest(content.dest));
+      .pipe(tplrender({ path: this.resolve(content.path) }))
+      .dest(content.dest), "render tpl", content);
   }
 
   private extendSourcemapOpts(opts: SourcemapOptions, src: string, dest: string): SourcemapOptions
   {
+    if (!src || !dest)
+      return null;
     var srcDir=(this.util.getPath(this.dir(src)) || [])[0];
     var destDir=(this.util.getPath(this.dir(dest)) || [])[0];
     return deepAssign(<SourcemapOptions>{
@@ -306,14 +357,14 @@ export class Build
 
   private sourcemapsInit(opt: SourcemapOptions)
   {
-    if (this.cfg.sourcemaps)
+    if (this.cfg.sourcemaps && opt)
       return sourcemaps.init(opt);
     return empty();
   }
 
   private sourcemapsWrite(opt: SourcemapOptions)
   {
-    if (this.cfg.sourcemaps)
+    if (this.cfg.sourcemaps && opt)
       return sourcemaps.write(opt.dest, opt);
     return empty();
   }
@@ -332,40 +383,82 @@ export class Build
     return empty()
   }
 
-  private getJsonVars(): any
+  private setConfigFromFile(file: any, content: JsonContent, prop?: string)
   {
-    if (!this.jsonVars)
-      this.jsonVars=deepAssign({}, this.cfg, {
-        "vscClassPath": this.vscClassPath,
-        "classPath": linq.from(this.classPath).orderBy(x => x).toArray()
-      });
-    return this.jsonVars;
+    log.verbose("set config", content);
+
+    // get json from file
+    var jstr=String(file.contents);
+    var json=JSON.parse(jstr);
+    
+    // wrap json into property
+    if (prop)
+    {
+      var h={};
+      h[prop]=json;
+      json=h;
+    }
+    
+    deepAssign(this.cfg, json);
+    log.verbose("config set", this.cfg);
+    return file;
   }
 
-  private mergeJson(content: JsonContent, vars: any)
+  private filterJson(filter: string[] | JsonFilter | (string[] | JsonFilter)[])
   {
-    log.verbose("merge json "+JSON.stringify(content)+ "(vars "+JSON.stringify(vars)+")");
-
-    // get filename
-    var fileName=pathutil.basename((typeof content.dest=="string")&&pathutil.extname(content.dest)?content.dest:content.src);
-
-    // get result map
-    if (typeof content.dest=="function")
+    if (filter && !Array.isArray(filter)) filter=[filter];
+    if (filter && filter.length)
     {
-      var map=content.dest;
-      content.dest=function (file, done)
-      {
-        var json=JSON.parse(file.contents.toString());
-        map(json, done);
-      };
+      if (typeof filter[0]=="string") filter=[<any>filter];
+      return data((file) => {
+        var json=JSON.parse(String(file.contents));
+        linq.from(<(string[] | JsonFilter)[]>filter).forEach(f => 
+        {
+          if (typeof f == "function")
+            json=(<JsonFilter>f)(json);
+          else // string[]
+          {
+            var filtered={};
+            linq.from(<string[]>f).forEach(prop =>
+            {
+              if (prop[0]=="<")
+                deepAssign(filtered, json[prop.substr(1)]);
+              else
+                filtered[prop]=json[prop];
+            });
+            json=filtered;
+          }
+        });
+        file.contents=new Buffer(JSON.stringify(json, null, this.cfg.minify?"":"  "));
+        return json;
+      });
     }
+    return empty();
+  }
 
+  private getJsonVars(vars?: any): any
+  {
+    return deepAssign({}, this.cfg, {
+      "vscClassPath": this.vscClassPath,
+      "classPath": linq.from(this.classPath).orderBy(x => x).toArray()
+    }, vars);
+  }
+
+  private mergeJson(content: JsonContent)
+  {
+    // get source
     var src: GulpStream;
+    if (typeof content.src=="function")
+      content.src=content.src(this);
     if (typeof content.src=="string" || Array.isArray(content.src))
       src=this.util.src(content.src);
     else
       src=this.util.contentSrc(content.src);
-    this.stream.add(src
+
+    // get filename
+    var fileName=pathutil.basename(typeof content.dest=="string" && pathutil.extname(content.dest) ? content.dest : (typeof content.src=="string"?content.src:"tmp.txt"));
+
+    return this.extStream(src
       .pipe(jmerge({
         fileName: fileName,
         startObj: content.base,
@@ -375,7 +468,7 @@ export class Build
         {
           if (typeof val=="string")
           {
-            var list=BuildUtil.replaceVars(val, vars);
+            var list=BuildUtil.replaceVars(val, this.getJsonVars(content.vars));
             if (list.length>1)
               return list;
             return list[0];
@@ -383,7 +476,8 @@ export class Build
           return val;
         }:null
       }))
-      .dest(content.dest));
+      .pipe(this.filterJson(content.filter))
+      .dest(content.dest), "merge json", content);
   }
 
   private buildTs(content: TSContent)
@@ -399,41 +493,52 @@ export class Build
     if (content.dts)
       content.options.declaration=true;
 
-    // log
-    log.verbose("build ts "+JSON.stringify(content));
+    // set sourcemap options
+    if (content.sourcemap)
+      content.sourcemap=this.extendSourcemapOpts(content.sourcemap, content.src, content.js);
 
     // compile ts
     var ts=<any>this.util.src(content.src)
       .pipe(this.sourcemapsInit(content.sourcemap))
       .pipe(typescript(content.options)).stream;
+    var tsStream=this.extStream(ts, "build ts", content);
 
     // minify and save js
-    if (ts.js && content.js)
-      this.stream.add(this.util.extend(ts.js)
+    if (ts && ts.js && content.js)
+      this.util.extend(ts.js, ts.meta)
         .pipe(this.minifyJs())
         .pipe(this.sourcemapsWrite(content.sourcemap))
-        .dest(this.dir(content.js)));
+        .dest(this.dir(content.js)).on("finish", () => 
+        {
+          log.silly("FINISHED ts-js");
+        });
 
     // save dts
-    if (ts.dts && content.dts)
-      this.stream.add(this.util.extend(ts.dts)
+    if (ts && ts.dts && content.dts)
+      this.util.extend(ts.dts, ts.meta)
         .pipe(this.rename(content.dts))
-        .dest(this.dir(content.dts)));
+        .dest(this.dir(content.dts)).on("finish", () => 
+        {
+          log.silly("FINISHED dts");
+        });
+
+    return tsStream;
   }
 
   private buildScss(content: SCSSContent)
   {
-    // log
-    log.verbose("build scss "+JSON.stringify(content));
+    // set sourcemap options
+    if (content.sourcemap)
+      content.sourcemap=this.extendSourcemapOpts(content.sourcemap, content.src, content.css);
 
     // compile scss
-    this.stream.add(this.util.src(content.src)
+    return this.extStream(this.util.src(content.src)
       .pipe(this.sourcemapsInit(content.sourcemap))
       .pipe(sass().on("error", sass.logError))
       .pipe(this.minifyCss())
       .pipe(this.rename(content.css))
       .pipe(this.sourcemapsWrite(content.sourcemap))
-      .dest(this.dir(content.css)));
+      .dest(this.dir(content.css)), "build scss", content);
   }
 
   private javac(jar: string, opt: JavacOptions, libs: string|string[])
@@ -449,42 +554,9 @@ export class Build
     // get options
     content.options=deepAssign({}, this.cfg.javac, content.options);
 
-    // log
-    log.verbose("build java "+JSON.stringify(content));
-
     // compile java
-    this.stream.add(this.util.src(content.src)
+    return this.extStream(this.util.src(content.src)
       .pipe(this.javac(content.jar, content.options, content.classPath))
-      .dest(pathutil.dirname(content.jar)));
-  }
-}
-
-/** Defines a build series. */
-export class BuildSeries
-{
-  /** Initializes a new instance. */
-  constructor(builds?: Build[]) {
-    this.builds=builds||[];
-  }
-
-  /** The builds of the series. */
-  public builds: Build[];
-
-  /** Adds the specified build. */
-  public add(build: Build)
-  {
-    this.builds.push(build);
-  }
-
-  /** Runs the series. */
-  public run(cb: (error?: any) => void)
-  {
-    async.series(linq.from(this.builds||[]).select(b => 
-    {
-      return function (next)
-      {
-        b.run().on("end", next);
-      };
-    }).toArray(), cb);
+      .dest(pathutil.dirname(content.jar)), "build java", content);
   }
 }
