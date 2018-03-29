@@ -2,6 +2,7 @@
 exports.__esModule = true;
 var sh = require("shelljs");
 var $linq = require("linq");
+var $jquery = require("jquery");
 var util_1 = require("./util");
 exports.BuildUtil = util_1.BuildUtil;
 exports.log = util_1.log;
@@ -21,4 +22,5 @@ exports.VSCodeDebuggers = vscode_1.VSCodeDebuggers;
 exports.shell = sh;
 exports.merge = require("deep-assign");
 exports.linq = $linq;
+exports.jquery = $jquery;
 exports.q = $linq.from;

@@ -1,6 +1,6 @@
 {
   "name": "gulp-web-build",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "Util for building web applications.",
   "main": "./bin/js/index.js",
   "types": "./bin/dts/index.d.ts",
@@ -59,6 +59,7 @@
     "gulp-uglifycss": "^1.0.6",
     "gulp-vinyl-zip": "^2.1.0",
     "gulp-zip": "^4.0.0",
+    "jquery": "^3.3.1",
     "linq": "^3.0.9",
     "merge-stream": "^1.0.1",
     "shelljs": "^0.7.8",

@@ -10,4 +10,5 @@ export { Gulp as gulp } from "gulp";
 export declare var shell: typeof sh;
 export declare var merge: any;
 export declare var linq: typeof $linq;
+export declare var jquery: any;
 export declare var q: typeof $linq.from;
