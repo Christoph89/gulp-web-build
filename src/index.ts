@@ -22,4 +22,4 @@ const { document } = (new JSDOM("")).window;
 (<any>global).document=document;
 (<any>global).window=document.defaultView;
 import * as $jquery from "jquery";
-export var jquery=$jquery;
+export var jq=$jquery;

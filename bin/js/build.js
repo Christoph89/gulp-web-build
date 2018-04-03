@@ -188,16 +188,22 @@ var Build = /** @class */ (function () {
                     util_1.log.verbose("[START] " + stream.logMsg, stream.meta);
                     stream.on("finish", function (err, res) {
                         util_1.log.verbose("[FINISHED] " + stream.logMsg, stream.meta);
-                        next(err, res);
+                        if (next)
+                            next(err, res);
+                        next = null;
                     })
                         .on("error", function (err) {
                         util_1.log.error(err);
-                        next(err);
+                        if (next)
+                            next(err);
+                        next = null;
                     });
                 }
                 else {
                     util_1.log.warn("[SKIPPED] undefined stream!");
-                    next(undefined, undefined);
+                    if (next)
+                        next(undefined, undefined);
+                    next = null;
                 }
             };
         }).toArray(), function (err) {

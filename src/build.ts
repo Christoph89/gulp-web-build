@@ -258,18 +258,21 @@ export class Build
             stream.on("finish", (err, res) => 
             {
               log.verbose("[FINISHED] "+stream.logMsg, stream.meta);
-              next(err, res);
+              if (next) next(err, res);
+              next=null;
             })
             .on("error", (err) => 
             {
               log.error(err);
-              next(err);
+              if (next) next(err);
+              next=null;
             });
           }
           else
           {
             log.warn("[SKIPPED] undefined stream!");
-            next(undefined, undefined);
+            if (next) next(undefined, undefined);
+            next=null;
           }
         };
       }).toArray(), (err) =>

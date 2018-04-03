@@ -29,4 +29,4 @@ var document = (new JSDOM("")).window.document;
 global.document = document;
 global.window = document.defaultView;
 var $jquery = require("jquery");
-exports.jquery = $jquery;
+exports.jq = $jquery;
