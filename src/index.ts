@@ -1,6 +1,5 @@
 import * as sh from "shelljs";
 import * as $linq from "linq";
-import * as $jquery from "jquery";
 import { Build } from "./build";
 
 export { BuildConfig, BuildCallback, MergedStream, JavacOptions, SourcemapOptions, GulpTask, 
@@ -14,5 +13,13 @@ export { Gulp as gulp } from "gulp";
 export var shell=sh;
 export var merge=require("deep-assign");
 export var linq=$linq;
-export var jquery=$jquery;
 export var q=$linq.from;
+
+// require jquery -> needs jsdom fix
+import * as jsdom from "jsdom";
+const { JSDOM } = jsdom;
+const { document } = (new JSDOM("")).window;
+(<any>global).document=document;
+(<any>global).window=document.defaultView;
+import * as $jquery from "jquery";
+export var jquery=$jquery;
