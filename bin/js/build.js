@@ -14,11 +14,13 @@ var uglifycss = require("gulp-uglifycss");
 var typescript = require("gulp-typescript");
 var sourcemaps = require("gulp-sourcemaps");
 var jmerge = require("gulp-merge-json");
+var file = require("gulp-file");
 var tplrender = require("gulp-nunjucks-render");
 var tpldata = require("gulp-data");
 var async = require("async");
 var def_1 = require("./def");
 var util_1 = require("./util");
+var stream_1 = require("./stream");
 var mergeStream = require("merge-stream"); // merge-stream does not support ES6 import
 /** Class for building web applications. */
 var Build = /** @class */ (function () {
@@ -57,6 +59,13 @@ var Build = /** @class */ (function () {
             this.buildContent.push(src);
         else
             this.buildContent.push({ contentType: def_1.BuildContentType.Static, src: src, dest: dest });
+        return this;
+    };
+    Build.prototype.addFile = function (content, filename, dest) {
+        if (arguments.length == 1)
+            this.buildContent.push(content);
+        else
+            this.buildContent.push({ contentType: def_1.BuildContentType.File, content: content, filename: filename, dest: dest });
         return this;
     };
     Build.prototype.addTpl = function (src, path, dest, data) {
@@ -215,6 +224,7 @@ var Build = /** @class */ (function () {
     Build.prototype.createStream = function (content) {
         switch (content.contentType) {
             case def_1.BuildContentType.Static: return this.copyStatic(content);
+            case def_1.BuildContentType.File: return this.writeFile(content);
             case def_1.BuildContentType.Tpl: return this.renderTpl(content);
             case def_1.BuildContentType.Json: return this.mergeJson(content);
             case def_1.BuildContentType.Typescript: return this.buildTs(content);
@@ -232,6 +242,11 @@ var Build = /** @class */ (function () {
     };
     Build.prototype.copyStatic = function (content) {
         return this.extStream(this.util.copy(content.src, content.dest), "copy", content);
+    };
+    Build.prototype.writeFile = function (content) {
+        if (typeof content.content == "function")
+            content.content = content.content(this);
+        return this.extStream(new stream_1.GulpStream(this.cfg, file(content.filename, content.content, { src: true }), { fileContent: content }).dest(content.dest), "write file", content);
     };
     Build.prototype.renderTpl = function (content) {
         if (!content.data)

@@ -3,6 +3,7 @@
 import * as ts from "gulp-typescript";
 import * as sourcemaps from "gulp-sourcemaps";
 import { TaskFunction } from "undertaker";
+import { Build } from ".";
 /** Config for building web applications. */
 export interface BuildConfig {
     /** Specifies the project directory. */
@@ -38,11 +39,12 @@ export interface SourcemapOptions extends sourcemaps.InitOptions, sourcemaps.Wri
 /** Specifies build content types. */
 export declare enum BuildContentType {
     Static = 0,
-    Tpl = 1,
-    Typescript = 2,
-    Scss = 3,
-    Json = 4,
-    Java = 5,
+    File = 1,
+    Tpl = 2,
+    Typescript = 3,
+    Scss = 4,
+    Json = 5,
+    Java = 6,
 }
 /** Specifies build content. */
 export interface BuildContent {
@@ -51,6 +53,12 @@ export interface BuildContent {
 /** Specfies static content. */
 export interface StaticContent extends BuildContent {
     src: string | string[];
+    dest: string | string[];
+}
+/** Specifies static file content. */
+export interface FileContent extends BuildContent {
+    content: string | ((b: Build) => string);
+    filename: string;
     dest: string | string[];
 }
 /** Specifies template content. */

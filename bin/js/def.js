@@ -4,9 +4,10 @@ exports.__esModule = true;
 var BuildContentType;
 (function (BuildContentType) {
     BuildContentType[BuildContentType["Static"] = 0] = "Static";
-    BuildContentType[BuildContentType["Tpl"] = 1] = "Tpl";
-    BuildContentType[BuildContentType["Typescript"] = 2] = "Typescript";
-    BuildContentType[BuildContentType["Scss"] = 3] = "Scss";
-    BuildContentType[BuildContentType["Json"] = 4] = "Json";
-    BuildContentType[BuildContentType["Java"] = 5] = "Java";
+    BuildContentType[BuildContentType["File"] = 1] = "File";
+    BuildContentType[BuildContentType["Tpl"] = 2] = "Tpl";
+    BuildContentType[BuildContentType["Typescript"] = 3] = "Typescript";
+    BuildContentType[BuildContentType["Scss"] = 4] = "Scss";
+    BuildContentType[BuildContentType["Json"] = 5] = "Json";
+    BuildContentType[BuildContentType["Java"] = 6] = "Java";
 })(BuildContentType = exports.BuildContentType || (exports.BuildContentType = {}));

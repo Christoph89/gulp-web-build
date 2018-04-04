@@ -18,7 +18,7 @@ import * as tplrender from "gulp-nunjucks-render";
 import * as tpldata from "gulp-data";
 import * as async from "async"; 
 import { BuildConfig, MergedStream, ReadWriteStreamExt, StaticContent, JsonContent, 
-         TSContent, SCSSContent, JavaContent, JavacOptions, SourcemapOptions, TplContent, JsonFilter, BuildCallback, BuildContent, BuildContentType } from "./def";
+         TSContent, SCSSContent, JavaContent, JavacOptions, SourcemapOptions, TplContent, JsonFilter, BuildCallback, BuildContent, BuildContentType, FileContent } from "./def";
 import { BuildUtil, log } from "./util";
 import { GulpStream } from "./stream";
 import { TsConfig } from "gulp-typescript/release/types";
@@ -78,6 +78,18 @@ export class Build
       this.buildContent.push(<StaticContent>src);
     else
       this.buildContent.push(<StaticContent>{ contentType: BuildContentType.Static, src: <string|string[]>src, dest: dest });
+    return this;
+  }
+
+  /** Adds static file content. */
+  public addFile(content: FileContent): Build;
+  public addFile(content: string|((b: Build) => string), filename: string, dest: string|string[]): Build;
+  public addFile(content: any, filename?: string, dest?: string|string[]): Build
+  {
+    if (arguments.length==1)
+      this.buildContent.push(content);
+    else
+      this.buildContent.push(<FileContent>{ contentType: BuildContentType.File, content: content, filename: filename, dest: dest });
     return this;
   }
 
@@ -287,6 +299,7 @@ export class Build
     switch (content.contentType)
     {
       case BuildContentType.Static: return this.copyStatic(<StaticContent>content);
+      case BuildContentType.File: return this.writeFile(<FileContent>content);
       case BuildContentType.Tpl: return this.renderTpl(<TplContent>content);
       case BuildContentType.Json: return this.mergeJson(<JsonContent>content);
       case BuildContentType.Typescript: return this.buildTs(<TSContent>content);
@@ -309,6 +322,13 @@ export class Build
   private copyStatic(content: StaticContent)
   {
     return this.extStream(this.util.copy(content.src, content.dest), "copy", content);
+  }
+
+  private writeFile(content: FileContent)
+  {
+    if (typeof content.content=="function")
+      content.content=content.content(this);
+    return this.extStream(new GulpStream(this.cfg, file(content.filename, content.content, { src: true }), { fileContent: content }).dest(content.dest), "write file", content);
   }
 
   private renderTpl(content: TplContent)

@@ -1,5 +1,5 @@
 import * as typescript from "gulp-typescript";
-import { BuildConfig, StaticContent, JsonContent, TSContent, SCSSContent, JavacOptions, SourcemapOptions, TplContent, JsonFilter, BuildCallback } from "./def";
+import { BuildConfig, StaticContent, JsonContent, TSContent, SCSSContent, JavacOptions, SourcemapOptions, TplContent, JsonFilter, BuildCallback, FileContent } from "./def";
 import { BuildUtil } from "./util";
 /** Class for building web applications. */
 export declare class Build {
@@ -17,6 +17,9 @@ export declare class Build {
     /** Adds content statically for copying without any building/parsing/etc. */
     add(content: StaticContent): Build;
     add(src: string | string[], dest: string | string[]): Build;
+    /** Adds static file content. */
+    addFile(content: FileContent): Build;
+    addFile(content: string | ((b: Build) => string), filename: string, dest: string | string[]): Build;
     /** Adds the specified template content. */
     addTpl(content: TplContent): Build;
     addTpl(src: string | string[], path: string | string[], dest: string | string[], data?: any | ((file: any, content: TplContent) => any)): Build;
@@ -52,6 +55,7 @@ export declare class Build {
     private createStream(content);
     private extStream(source, logMsg, content);
     private copyStatic(content);
+    private writeFile(content);
     private renderTpl(content);
     private extendSourcemapOpts(opts, src, dest);
     private resolveClassPath(path);
