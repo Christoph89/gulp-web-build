@@ -13,7 +13,7 @@ export declare class Build {
     vscSettings: any;
     constructor(cfg?: BuildConfig);
     /** Initializes the current build. */
-    private init(cfg);
+    private init;
     /** Adds content statically for copying without any building/parsing/etc. */
     add(content: StaticContent): Build;
     add(src: string | string[], dest: string | string[]): Build;
@@ -52,25 +52,25 @@ export declare class Build {
     readJson(path: string): any;
     /** Runs the web build. */
     run(cb: BuildCallback): void;
-    private createStream(content);
-    private extStream(source, logMsg, content);
-    private copyStatic(content);
-    private writeFile(content);
-    private renderTpl(content);
-    private extendSourcemapOpts(opts, src, dest);
-    private resolveClassPath(path);
-    private minifyJs();
-    private minifyCss();
-    private sourcemapsInit(opt);
-    private sourcemapsWrite(opt);
-    private dir(path);
-    private rename(path);
-    private setConfigFromFile(file, content, prop?);
-    private filterJson(filter);
-    private getJsonVars(vars?);
-    private mergeJson(content);
-    private buildTs(content);
-    private buildScss(content);
-    private javac(jar, opt, libs);
-    private buildJava(content);
+    private createStream;
+    private extStream;
+    private copyStatic;
+    private writeFile;
+    private renderTpl;
+    private extendSourcemapOpts;
+    private resolveClassPath;
+    private minifyJs;
+    private minifyCss;
+    private sourcemapsInit;
+    private sourcemapsWrite;
+    private dir;
+    private rename;
+    private setConfigFromFile;
+    private filterJson;
+    private getJsonVars;
+    private mergeJson;
+    private buildTs;
+    private buildScss;
+    private javac;
+    private buildJava;
 }

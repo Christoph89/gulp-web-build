@@ -16,9 +16,9 @@ var Clean = /** @class */ (function () {
         for (var _i = 0; _i < arguments.length; _i++) {
             paths[_i] = arguments[_i];
         }
+        var _a;
         (_a = this.paths).push.apply(_a, paths);
         return this;
-        var _a;
     };
     /** Deletes all files excluded from vs code but leaves the specified paths. */
     Clean.prototype.delVSCodeExcludes = function () {
@@ -26,6 +26,7 @@ var Clean = /** @class */ (function () {
         for (var _i = 0; _i < arguments.length; _i++) {
             leave[_i] = arguments[_i];
         }
+        var _a;
         if (!leave)
             leave = [];
         if (!this.vscSettings)
@@ -34,7 +35,6 @@ var Clean = /** @class */ (function () {
         if (exclude)
             (_a = this.paths).push.apply(_a, linq.from(exclude).where(function (x) { return x.value && leave.indexOf(x.key) == -1; }).select(function (x) { return x.key; }).toArray());
         return this;
-        var _a;
     };
     /** Deletes all specified paths. */
     Clean.prototype.run = function (cb) {

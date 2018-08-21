@@ -1,5 +1,4 @@
 /// <reference types="node" />
-/// <reference types="undertaker" />
 import * as ts from "gulp-typescript";
 import * as sourcemaps from "gulp-sourcemaps";
 import { TaskFunction } from "undertaker";
@@ -44,7 +43,7 @@ export declare enum BuildContentType {
     Typescript = 3,
     Scss = 4,
     Json = 5,
-    Java = 6,
+    Java = 6
 }
 /** Specifies build content. */
 export interface BuildContent {

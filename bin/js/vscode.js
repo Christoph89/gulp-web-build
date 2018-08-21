@@ -26,9 +26,9 @@ var VSCode = /** @class */ (function () {
         for (var _i = 0; _i < arguments.length; _i++) {
             dbg[_i] = arguments[_i];
         }
+        var _a;
         (_a = this.debuggers).push.apply(_a, linq.from(dbg).selectMany(function (x) { return Array.isArray(x) ? x : [x]; }).toArray());
         return this;
-        var _a;
     };
     /** Add a task. */
     VSCode.prototype.addTask = function () {
@@ -36,9 +36,9 @@ var VSCode = /** @class */ (function () {
         for (var _i = 0; _i < arguments.length; _i++) {
             task[_i] = arguments[_i];
         }
+        var _a;
         (_a = this.tasks).push.apply(_a, task);
         return this;
-        var _a;
     };
     /** Adds all gulp tasks. */
     VSCode.prototype.addGulpTasks = function () {
@@ -53,6 +53,7 @@ var VSCode = /** @class */ (function () {
         else if (tasks.length && (typeof tasks[0] == "string"))
             tasks = linq.from(tasks).select(function (x) { return ({ name: x }); }).toArray(); // convert string array
         linq.from(tasks).forEach(function (t) {
+            var _a;
             return _this.addTask({
                 label: t.name,
                 command: "gulp",
@@ -65,7 +66,6 @@ var VSCode = /** @class */ (function () {
                 },
                 problemMatcher: []
             });
-            var _a;
         });
         return this;
     };
@@ -75,11 +75,11 @@ var VSCode = /** @class */ (function () {
         for (var _i = 0; _i < arguments.length; _i++) {
             dependencies[_i] = arguments[_i];
         }
+        var _a;
         if (!this.settings["java.classPath"])
             this.settings["java.classPath"] = [];
         (_a = this.settings["java.classPath"]).push.apply(_a, dependencies);
         return this;
-        var _a;
     };
     /** Adds all java dependencies specified at the javaDependencies property in package.json  */
     VSCode.prototype.addNpmJavaDepdencies = function () {

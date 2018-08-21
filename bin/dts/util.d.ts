@@ -1,11 +1,8 @@
-/// <reference types="winston" />
-/// <reference types="undertaker" />
 /// <reference types="node" />
-import * as winston from "winston";
 import { BuildConfig, GulpTask } from "./def";
 import { GulpStream } from "./stream";
 import { TaskFunction } from "undertaker";
-export declare var log: winston.LoggerInstance;
+export declare var log: any;
 export declare function logMeta(writeMeta: (logLevel: string, curLevel: string, meta: any) => string): void;
 export declare function task(name: string, fn: TaskFunction): any;
 export declare function task(name: string, dependencies: string[], fn?: TaskFunction): any;
@@ -29,8 +26,8 @@ export declare class BuildUtil {
     static getPath(path: string | string[], vars: any): string[];
     /** Replaces all occurences of the keys specified in vars with its value. */
     static replaceVars(list: string | string[], vars: any, prefix?: string): string[];
-    private static replaceAll(list, searchVal, replaceVals);
-    private static replace(str, searchVal, replaceVals);
+    private static replaceAll;
+    private static replace;
     /** Reads the specified file. */
     static read(path: string, vars?: any): string;
     /** Reads all lines from the specified file. */

@@ -334,7 +334,8 @@ var Build = /** @class */ (function () {
                 linq.from(filter).forEach(function (f) {
                     if (typeof f == "function")
                         json = f(json);
-                    else {
+                    else // string[]
+                     {
                         var filtered = {};
                         linq.from(f).forEach(function (prop) {
                             if (prop[0] == "<")
