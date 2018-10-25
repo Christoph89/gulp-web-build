@@ -1,8 +1,9 @@
 /// <reference types="node" />
+import * as winston from "winston";
 import { BuildConfig, GulpTask } from "./def";
 import { GulpStream } from "./stream";
 import { TaskFunction } from "undertaker";
-export declare var log: any;
+export declare var log: winston.LoggerInstance;
 export declare function logMeta(writeMeta: (logLevel: string, curLevel: string, meta: any) => string): void;
 export declare function task(name: string, fn: TaskFunction): any;
 export declare function task(name: string, dependencies: string[], fn?: TaskFunction): any;

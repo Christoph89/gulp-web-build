@@ -1,4 +1,3 @@
-/// <reference types="jquery" />
 import * as sh from "shelljs";
 import * as $linq from "linq";
 export { BuildConfig, BuildCallback, MergedStream, JavacOptions, SourcemapOptions, GulpTask, StaticContent, TplContent, JsonContent, TSContent, SCSSContent, JavaContent, DestinationMap } from "./def";
