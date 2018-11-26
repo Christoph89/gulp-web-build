@@ -145,7 +145,7 @@ export class VSCode
   public excludeGitIgnores(): VSCode
   {
     if (!fs.existsSync(".gitignore"))
-      return;
+      return this;
     var paths=linq.from(BuildUtil.readLines(".gitignore")).where(l => 
     {
       var trimmed=l.trim();
