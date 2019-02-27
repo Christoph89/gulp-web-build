@@ -31,7 +31,7 @@ export declare class VSCode {
     /** Excludes the specified paths from vs code. */
     exclude(...paths: (string | string[])[]): VSCode;
     /** Excludes all paths from .gitignore from vs code.*/
-    excludeGitIgnores(): VSCode;
+    excludeGitIgnores(...except: string[]): VSCode;
     run(cb: BuildCallback): void;
 }
 /** Contains debuggers. */

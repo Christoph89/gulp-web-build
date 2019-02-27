@@ -1,109 +1,58 @@
 import * as fs from "fs";
 import * as linq from "linq";
-import * as del from "del";
 import * as pathutil from "path";
-import * as deepAssign from "deep-assign";
-import * as winston from "winston";
 import * as gulp from "gulp";
-import * as multiDest from "gulp-multi-dest";
 import * as gzip from "gulp-zip";
 import * as shell from "shelljs";
-import * as async from "async";
 import * as stripJsonComments from "strip-json-comments";
+import { Task } from "undertaker";
 import { BuildConfig, GulpTask } from "./def";
 import { GulpStream } from "./stream";
+import * as log from "./log";
 import { TaskFunction } from "undertaker";
 
-// log utils
-var logLevel=process.env.log || process.env.LOG || "info";
-var transport=new winston.transports.Console({
-  timestamp: () => (new Date()).toISOString(),
-  colorize: true,
-  level: logLevel,
-});
-var writeLogMeta: (logLevel: string, curLevel: string, meta: any) => string;
-export var log=new winston.Logger({
-  transports: [transport],
-  rewriters: [(lvl, msg, meta) =>
-  {
-    if (logLevel!="debug" && logLevel!="silly" && logLevel!="warn" && logLevel!="error" || !meta || linq.from(meta).count()==0)
-      return null;
-    return writeLogMeta?writeLogMeta(logLevel, lvl, meta):JSON.stringify(meta, null, "  ");
-  }]
-});
-export function logMeta(writeMeta: (logLevel: string, curLevel: string, meta: any) => string)
-{
-  writeLogMeta=writeMeta;
-}
-
 // export gulp
-var tasks: GulpTask[]=[];
-export function task(name: string, fn: TaskFunction);
-export function task(name: string, dependencies: string[], fn?: TaskFunction);
-export function task(t: GulpTask, fn: TaskFunction);
-export function task(t: any, dependencies: any, fn?: TaskFunction)
+var regTasks: GulpTask[]=[];
+export function task(name: string, ...tasks: Task[])
 {
-  // get dependencies and task func
-  if (typeof dependencies==="function") 
-  {
-    fn=dependencies;
-    dependencies=null;
-  }
-
   // get full task definition
-  var tn: GulpTask=(typeof t=="string")?{ 
-    name: t, 
-    group: t=="build"||t=="dist"?"build":null, // register build and dist task automatically as build task
-    dependencies: dependencies
-  }:t;
-
-  // set task function
-  tn.fn=function (cb) {
-    log.info("[TASK "+tn.name.toUpperCase()+"]");
-    return fn?fn(cb):cb();
+  var tn: GulpTask={ 
+    name: name, 
+    group: name=="build"||name=="dist"?"build":null, // register build and dist task automatically as build task
   };
+  if (tasks!=null && tasks.length>1)
+    tn.fn=series(...tasks);
+  else
+    tn.fn=<TaskFunction>tasks[0];
+
+  // check task function
+  if (!tn.fn)
+    throw "No TaskFunction defined for task '"+tn.name+"'!";
 
   // remember task in environment vars
-  tasks.push(tn);
-  process.env.regtasks=JSON.stringify(tasks);
-
-  // register gulp task series
-  if (tn.dependencies && tn.dependencies.length && tn.dependencies[0]=="@series:")
-    return (<any>gulp).task(tn.name, function(cb)
-    {
-      var funcs=linq.from(tn.dependencies).skip(1)
-        .selectMany(x => getTaskFnRecursive(x)).toArray();
-      funcs.push(tn.fn);
-      async.series(funcs, cb);
-    });
+  regTasks.push(tn);
+  process.env.regtasks=JSON.stringify(regTasks);
 
   // register normal gulp task.
-  return (<any>gulp).task(tn.name, tn.dependencies, tn.fn);
+  gulp.task(tn.name, tn.fn);
 };
 
-function getTaskFnRecursive(taskName: string): TaskFunction[]
+/** Returns a dependency series */
+export function series(...tasks: Task[]): TaskFunction
 {
-  var fn: TaskFunction[]=[];
-  var task=getTask(taskName);
-  if (task)
-  {
-    if (task.dependencies)
-      fn=fn.concat(linq.from(task.dependencies).selectMany(x => getTaskFnRecursive(x)).toArray());
-    fn.push(task.fn);
-  }
-  return fn;
+  return gulp.series(tasks);
 }
 
-/** Returns a dependency series */
-export function series(...tasks: string[]): string[]
+/** Returns a dependency parallel */
+export function parallel(...tasks: Task[]): TaskFunction
 {
-  return ["@series:"].concat(tasks);
+  return gulp.parallel(tasks);
 }
 
 /** Returns the specified task. */
 function getTask(name: string): GulpTask
 {
-  return linq.from(tasks).firstOrDefault(x => x.name==name, null);
+  return linq.from(regTasks).firstOrDefault(x => x.name==name, null);
 }
 
 /** Runs the specified task synchronously. */

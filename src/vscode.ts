@@ -142,13 +142,16 @@ export class VSCode
   }
 
   /** Excludes all paths from .gitignore from vs code.*/
-  public excludeGitIgnores(): VSCode
+  public excludeGitIgnores(...except: string[]): VSCode
   {
     if (!fs.existsSync(".gitignore"))
       return this;
+    var exc=except?linq.from(except):null;
     var paths=linq.from(BuildUtil.readLines(".gitignore")).where(l => 
     {
       var trimmed=l.trim();
+      if (exc && exc.contains(trimmed))
+        return false;
       return trimmed!=".vscode" && trimmed[0]!="#" // do not exclude .vscode and gitignore comments
     }).toArray();
     this.exclude(...paths);

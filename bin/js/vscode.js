@@ -130,10 +130,17 @@ var VSCode = /** @class */ (function () {
     };
     /** Excludes all paths from .gitignore from vs code.*/
     VSCode.prototype.excludeGitIgnores = function () {
+        var except = [];
+        for (var _i = 0; _i < arguments.length; _i++) {
+            except[_i] = arguments[_i];
+        }
         if (!fs.existsSync(".gitignore"))
             return this;
+        var exc = except ? linq.from(except) : null;
         var paths = linq.from(util_1.BuildUtil.readLines(".gitignore")).where(function (l) {
             var trimmed = l.trim();
+            if (exc && exc.contains(trimmed))
+                return false;
             return trimmed != ".vscode" && trimmed[0] != "#"; // do not exclude .vscode and gitignore comments
         }).toArray();
         this.exclude.apply(this, paths);

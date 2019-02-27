@@ -19,7 +19,8 @@ import * as tpldata from "gulp-data";
 import * as async from "async"; 
 import { BuildConfig, MergedStream, ReadWriteStreamExt, StaticContent, JsonContent, 
          TSContent, SCSSContent, JavaContent, JavacOptions, SourcemapOptions, TplContent, JsonFilter, BuildCallback, BuildContent, BuildContentType, FileContent } from "./def";
-import { BuildUtil, log } from "./util";
+import { BuildUtil } from "./util";
+import * as log from "./log";
 import { GulpStream } from "./stream";
 import { TsConfig } from "gulp-typescript/release/types";
 var mergeStream=require("merge-stream"); // merge-stream does not support ES6 import
@@ -256,7 +257,7 @@ export class Build
   /** Runs the web build. */
   public run(cb: BuildCallback): void
   {
-    log.verbose("[START BUILD]");
+    log.debug("Start build");
     var build=this;
     async.series(linq.from(this.buildContent)
       .select((content, idx) => 
@@ -266,10 +267,10 @@ export class Build
           var stream=build.createStream(content);
           if (stream)
           {
-            log.verbose("[START] "+stream.logMsg, stream.meta);
+            log.debug("Start "+stream.logMsg, { debug: stream.meta });
             stream.on("finish", (err, res) => 
             {
-              log.verbose("[FINISHED] "+stream.logMsg, stream.meta);
+              log.debug("Finished "+stream.logMsg, { debug: stream.meta });
               if (next) next(err, res);
               next=null;
             })
@@ -282,14 +283,14 @@ export class Build
           }
           else
           {
-            log.warn("[SKIPPED] undefined stream!");
+            log.warn("Skipped undefined stream!");
             if (next) next(undefined, undefined);
             next=null;
           }
         };
       }).toArray(), (err) =>
       {
-        log.verbose("[FINISHED BUILD]")
+        log.debug("Finished build")
         if (cb) return cb(err);
       });
   }
@@ -533,7 +534,7 @@ export class Build
         .pipe(this.sourcemapsWrite(content.sourcemap))
         .dest(this.dir(content.js)).on("finish", () => 
         {
-          log.silly("FINISHED ts-js");
+          log.silly("Finished ts-js");
         });
 
     // save dts
@@ -542,7 +543,7 @@ export class Build
         .pipe(this.rename(content.dts))
         .dest(this.dir(content.dts)).on("finish", () => 
         {
-          log.silly("FINISHED dts");
+          log.silly("Finished dts");
         });
 
     return tsStream;

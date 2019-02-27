@@ -1,15 +1,13 @@
 /// <reference types="node" />
-import * as winston from "winston";
+import { Task } from "undertaker";
 import { BuildConfig, GulpTask } from "./def";
 import { GulpStream } from "./stream";
 import { TaskFunction } from "undertaker";
-export declare var log: winston.LoggerInstance;
-export declare function logMeta(writeMeta: (logLevel: string, curLevel: string, meta: any) => string): void;
-export declare function task(name: string, fn: TaskFunction): any;
-export declare function task(name: string, dependencies: string[], fn?: TaskFunction): any;
-export declare function task(t: GulpTask, fn: TaskFunction): any;
+export declare function task(name: string, ...tasks: Task[]): void;
 /** Returns a dependency series */
-export declare function series(...tasks: string[]): string[];
+export declare function series(...tasks: Task[]): TaskFunction;
+/** Returns a dependency parallel */
+export declare function parallel(...tasks: Task[]): TaskFunction;
 /** Runs the specified task synchronously. */
 export declare function runTask(name: string, ...args: string[]): void;
 /** Returns all registered tasks. */

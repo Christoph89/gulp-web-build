@@ -1,10 +1,11 @@
 import * as sh from "shelljs";
 import * as $linq from "linq";
+import * as logger from "./log";
 import { Build } from "./build";
 
 export { BuildConfig, BuildCallback, MergedStream, JavacOptions, SourcemapOptions, GulpTask, 
   StaticContent, TplContent, JsonContent, TSContent, SCSSContent, JavaContent, DestinationMap } from "./def"
-export { BuildUtil, log, logMeta, task, runTask, series, registeredTasks, zip } from "./util";
+export { BuildUtil, task, runTask, series, registeredTasks, zip } from "./util";
 export { Build } from "./build";
 export { Clean } from "./clean";
 export { VSCode, VSCodeConfig, VSCodeDebuggers } from "./vscode";
@@ -14,6 +15,7 @@ export var shell=sh;
 export var merge=require("deep-assign");
 export var linq=$linq;
 export var q=$linq.from;
+export var log=logger;
 
 // require jquery -> needs jsdom fix
 import * as jsdom from "jsdom";

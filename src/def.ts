@@ -138,7 +138,7 @@ export interface GulpTask
 {
   name: string;
   group?: "build" | "test" | "none";
-  dependencies?: string[]
+  //dependencies?: string[] @@todo remove
   args?: string[]
   fn?: TaskFunction;
 }

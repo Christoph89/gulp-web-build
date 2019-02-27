@@ -20,6 +20,7 @@ var tpldata = require("gulp-data");
 var async = require("async");
 var def_1 = require("./def");
 var util_1 = require("./util");
+var log = require("./log");
 var stream_1 = require("./stream");
 var mergeStream = require("merge-stream"); // merge-stream does not support ES6 import
 /** Class for building web applications. */
@@ -50,7 +51,7 @@ var Build = /** @class */ (function () {
                 this.vscClassPath = this.resolveClassPath(vscSettings["java.classPath"] || []);
                 this.classPath = this.classPath.concat(this.vscClassPath);
                 if (this.vscClassPath.length)
-                    util_1.log.info("add vs code classpath " + JSON.stringify(this.vscClassPath));
+                    log.info("add vs code classpath " + JSON.stringify(this.vscClassPath));
             }
         }
     };
@@ -162,10 +163,10 @@ var Build = /** @class */ (function () {
         });
         // add classpath
         this.classPath.push(jar = this.resolveClassPath(jar));
-        util_1.log.info("add classpath " + jar);
+        log.info("add classpath " + jar);
         if (classpath && classpath.length) {
             this.classPath = linq.from(this.classPath).union(linq.from(classpath)).toArray(); // remember classpaths
-            util_1.log.info("add classpath " + JSON.stringify(classpath));
+            log.info("add classpath " + JSON.stringify(classpath));
         }
         return this;
     };
@@ -187,36 +188,36 @@ var Build = /** @class */ (function () {
     };
     /** Runs the web build. */
     Build.prototype.run = function (cb) {
-        util_1.log.verbose("[START BUILD]");
+        log.debug("Start build");
         var build = this;
         async.series(linq.from(this.buildContent)
             .select(function (content, idx) {
             return function (next) {
                 var stream = build.createStream(content);
                 if (stream) {
-                    util_1.log.verbose("[START] " + stream.logMsg, stream.meta);
+                    log.debug("Start " + stream.logMsg, { debug: stream.meta });
                     stream.on("finish", function (err, res) {
-                        util_1.log.verbose("[FINISHED] " + stream.logMsg, stream.meta);
+                        log.debug("Finished " + stream.logMsg, { debug: stream.meta });
                         if (next)
                             next(err, res);
                         next = null;
                     })
                         .on("error", function (err) {
-                        util_1.log.error(err);
+                        log.error(err);
                         if (next)
                             next(err);
                         next = null;
                     });
                 }
                 else {
-                    util_1.log.warn("[SKIPPED] undefined stream!");
+                    log.warn("Skipped undefined stream!");
                     if (next)
                         next(undefined, undefined);
                     next = null;
                 }
             };
         }).toArray(), function (err) {
-            util_1.log.verbose("[FINISHED BUILD]");
+            log.debug("Finished build");
             if (cb)
                 return cb(err);
         });
@@ -308,7 +309,7 @@ var Build = /** @class */ (function () {
         return empty();
     };
     Build.prototype.setConfigFromFile = function (file, content, prop) {
-        util_1.log.verbose("set config", content);
+        log.verbose("set config", content);
         // get json from file
         var jstr = String(file.contents);
         var json = JSON.parse(jstr);
@@ -319,7 +320,7 @@ var Build = /** @class */ (function () {
             json = h;
         }
         deepAssign(this.cfg, json);
-        util_1.log.verbose("config set", this.cfg);
+        log.verbose("config set", this.cfg);
         return file;
     };
     Build.prototype.filterJson = function (filter) {
@@ -412,14 +413,14 @@ var Build = /** @class */ (function () {
                 .pipe(this.minifyJs())
                 .pipe(this.sourcemapsWrite(content.sourcemap))
                 .dest(this.dir(content.js)).on("finish", function () {
-                util_1.log.silly("FINISHED ts-js");
+                log.silly("Finished ts-js");
             });
         // save dts
         if (ts && ts.dts && content.dts)
             this.util.extend(ts.dts, ts.meta)
                 .pipe(this.rename(content.dts))
                 .dest(this.dir(content.dts)).on("finish", function () {
-                util_1.log.silly("FINISHED dts");
+                log.silly("Finished dts");
             });
         return tsStream;
     };

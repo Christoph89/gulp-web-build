@@ -9,26 +9,27 @@ var file = require("gulp-file");
 var data = require("gulp-data");
 var deepAssign = require("deep-assign");
 var util_1 = require("./util");
+var log = require("./log");
 /** Extended gulp stream. */
 var GulpStream = /** @class */ (function () {
     function GulpStream(cfg, stream, meta) {
         this.cfg = cfg;
         this.stream = stream;
         if (!this.stream)
-            util_1.log.verbose("empty src stream");
+            log.verbose("empty src stream");
         else if (meta)
             this.stream.meta = deepAssign(this.stream.meta || {}, meta);
     }
     /** Return the source stream for the specified path. */
     GulpStream.src = function (cfg, path) {
         path = util_1.BuildUtil.getPath(path, cfg);
-        util_1.log.silly("src", path);
+        log.silly("src", path);
         return new GulpStream(cfg, path ? gulp.src(path) : null, { src: path });
     };
     /** Return the source stream for the specified content. */
     GulpStream.contentSrc = function (cfg, content) {
         var str = (typeof content == "string") ? content : (content ? JSON.stringify(content) : null);
-        util_1.log.silly("content src", str);
+        log.silly("content src", str);
         return new GulpStream(cfg, str ? file("src", str, { src: true }, { contentSrc: content }) : null);
     };
     /** Pipes the current stream to the specified desination stream. */
@@ -41,7 +42,7 @@ var GulpStream = /** @class */ (function () {
     /** Sets the destination for the current stream. */
     GulpStream.prototype.dest = function (path) {
         if (!this.stream) {
-            util_1.log.verbose("empty dest stream for", path);
+            log.verbose("empty dest stream for", path);
             return null;
         }
         // destination is function?
@@ -51,7 +52,7 @@ var GulpStream = /** @class */ (function () {
         path = util_1.BuildUtil.getPath(path, this.cfg);
         // add meta to src stream
         this.stream.meta = deepAssign(this.stream.meta || {}, { dest: path });
-        util_1.log.silly("dest", path);
+        log.silly("dest", path);
         var filename;
         var destStream;
         if (typeof path == "string") {

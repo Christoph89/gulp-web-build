@@ -7,7 +7,8 @@ import * as file from "gulp-file";
 import * as data from "gulp-data";
 import * as deepAssign from "deep-assign";
 import { BuildConfig, DestinationMap, ReadWriteStreamExt } from "./def";
-import { BuildUtil, log } from "./util";
+import { BuildUtil } from "./util";
+import * as log from "./log";
 
 /** Extended gulp stream. */
 export class GulpStream

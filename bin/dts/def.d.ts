@@ -106,7 +106,6 @@ export interface JsonFilter {
 export interface GulpTask {
     name: string;
     group?: "build" | "test" | "none";
-    dependencies?: string[];
     args?: string[];
     fn?: TaskFunction;
 }
