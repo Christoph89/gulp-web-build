@@ -15,4 +15,4 @@ log=error|warn|info|verbose|debug|silly gulp build
 NODE_ENV=production gulp build > output.log
 
 **Write lot to file and console**
-NODE_ENV=production gulp build > 2>&1 | tee output.log
+NODE_ENV=production gulp build 2>&1 | tee output.log

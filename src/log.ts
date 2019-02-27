@@ -70,7 +70,7 @@ function formatMeta(msg: TransformableInfo)
   linq.from(meta).forEach(m => {
     linq.from(m).forEach(x => {
       if ((mask&LogLevel[x.key])!=0)
-        metaStr+=`\n${"".padEnd(msg.timestamp.length+2-7, " ")} [meta] [${x.key}] ${JSON.stringify(x)}`;
+        metaStr+=`\n${"".padEnd(msg.timestamp.length+2-7, " ")} [meta] [${x.key}] ${writeMeta(msg, x.value)}`;
     });
   });
   return metaStr;
@@ -84,11 +84,16 @@ function formatMetaColored(msg: TransformableInfo)
   linq.from(meta).forEach(m => {
     linq.from(m).forEach(x => {
       if ((mask&LogLevel[x.key])!=0)
-        metaStr+=`\n${"".padEnd(msg.timestamp.length+2-7, " ")} [${"meta".gray}] [${winston.format.colorize().colorize(x.key, x.key)}] ${JSON.stringify(x)}\n`;
+        metaStr+=`\n${"".padEnd(msg.timestamp.length+2-7, " ")} [${"meta".gray}] [${winston.format.colorize().colorize(x.key, x.key)}] ${writeMeta(msg, x.value)}\n`;
     });
   });
   return metaStr;
 }
+
+export var writeMeta=function(msg: TransformableInfo, meta: any)
+{
+  return JSON.stringify(meta);
+};
 
 /** Defines log meta. */
 export interface LogMeta

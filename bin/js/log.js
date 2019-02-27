@@ -58,7 +58,7 @@ function formatMeta(msg) {
     linq.from(meta).forEach(function (m) {
         linq.from(m).forEach(function (x) {
             if ((exports.mask & LogLevel[x.key]) != 0)
-                metaStr += "\n" + "".padEnd(msg.timestamp.length + 2 - 7, " ") + " [meta] [" + x.key + "] " + JSON.stringify(x);
+                metaStr += "\n" + "".padEnd(msg.timestamp.length + 2 - 7, " ") + " [meta] [" + x.key + "] " + exports.writeMeta(msg, x.value);
         });
     });
     return metaStr;
@@ -70,11 +70,14 @@ function formatMetaColored(msg) {
     linq.from(meta).forEach(function (m) {
         linq.from(m).forEach(function (x) {
             if ((exports.mask & LogLevel[x.key]) != 0)
-                metaStr += "\n" + "".padEnd(msg.timestamp.length + 2 - 7, " ") + " [" + "meta".gray + "] [" + winston.format.colorize().colorize(x.key, x.key) + "] " + JSON.stringify(x) + "\n";
+                metaStr += "\n" + "".padEnd(msg.timestamp.length + 2 - 7, " ") + " [" + "meta".gray + "] [" + winston.format.colorize().colorize(x.key, x.key) + "] " + exports.writeMeta(msg, x.value) + "\n";
         });
     });
     return metaStr;
 }
+exports.writeMeta = function (msg, meta) {
+    return JSON.stringify(meta);
+};
 function isLogMeta(meta) {
     for (var key in meta)
         if (key != "error" && key != "warn" && key != "info" && key != "verbose" && key != "debug" && key != "silly")
