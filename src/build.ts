@@ -242,6 +242,12 @@ export class Build
     return (this.util.getPath(path)||[])[0];
   }
 
+  /** Resolves the specified data and replaces vars. */
+  public resolveRecursive(data: any)
+  {
+    return BuildUtil.replaceVarsRecursive(data, this.cfg);
+  }
+
   /** Reads the specified file. */
   public read(path: string): string
   {

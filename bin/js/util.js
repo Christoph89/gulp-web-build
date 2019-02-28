@@ -136,6 +136,17 @@ var BuildUtil = /** @class */ (function () {
         var res = linq.from(replaceVals).select(function (v) { return str.replace(searchVal, v); }).distinct().toArray();
         return res;
     };
+    /** Replaces all vars recursive. */
+    BuildUtil.replaceVarsRecursive = function (data, vars) {
+        if (Array.isArray(data))
+            linq.from(data).forEach(function (x) { return BuildUtil.replaceVarsRecursive(x); });
+        else if (typeof data == "object")
+            for (var key in data)
+                data[key] = BuildUtil.replaceVarsRecursive(data[key]);
+        else if (typeof data == "string")
+            return (BuildUtil.getPath(data, vars) || [])[0];
+        return data;
+    };
     /** Reads the specified file. */
     BuildUtil.read = function (path, vars) {
         var path = (BuildUtil.getPath(path, vars) || [])[0];

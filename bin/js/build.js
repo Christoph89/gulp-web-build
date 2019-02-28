@@ -178,6 +178,10 @@ var Build = /** @class */ (function () {
     Build.prototype.resolveFirst = function (path) {
         return (this.util.getPath(path) || [])[0];
     };
+    /** Resolves the specified data and replaces vars. */
+    Build.prototype.resolveRecursive = function (data) {
+        return util_1.BuildUtil.replaceVarsRecursive(data, this.cfg);
+    };
     /** Reads the specified file. */
     Build.prototype.read = function (path) {
         return util_1.BuildUtil.read(path, this.cfg);

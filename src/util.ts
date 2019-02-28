@@ -148,6 +148,19 @@ export class BuildUtil
     return res;
   }
 
+  /** Replaces all vars recursive. */
+  public static replaceVarsRecursive(data: any, vars?: any)
+  {
+    if (Array.isArray(data))
+      linq.from(data).forEach(x => BuildUtil.replaceVarsRecursive( x));
+    else if (typeof data == "object")
+      for (var key in data)
+        data[key]=BuildUtil.replaceVarsRecursive(data[key]);
+    else if (typeof data == "string")
+      return (BuildUtil.getPath(data, vars)||[])[0];
+    return data;
+  }
+
   /** Reads the specified file. */
   public static read(path: string, vars?: any): string
   {

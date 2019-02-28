@@ -46,6 +46,8 @@ export declare class Build {
     resolve(path: string | string[]): string[];
     /** Resolves the specified path. */
     resolveFirst(path: string | string[]): string;
+    /** Resolves the specified data and replaces vars. */
+    resolveRecursive(data: any): any;
     /** Reads the specified file. */
     read(path: string): string;
     /** Reads the specified json file. */

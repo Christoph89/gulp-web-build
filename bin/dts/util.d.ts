@@ -27,6 +27,8 @@ export declare class BuildUtil {
     static replaceVars(list: string | string[], vars: any, prefix?: string): string[];
     private static replaceAll;
     private static replace;
+    /** Replaces all vars recursive. */
+    static replaceVarsRecursive(data: any, vars?: any): any;
     /** Reads the specified file. */
     static read(path: string, vars?: any): string;
     /** Reads all lines from the specified file. */
