@@ -1,7 +1,7 @@
 import * as linq from "linq";
 import * as winston from "winston";
-import * as merge from "deep-assign";
 import { TransformableInfo } from "logform";
+import { merge } from "./index";
 import * as colors from "colors";
 require("colors");
 

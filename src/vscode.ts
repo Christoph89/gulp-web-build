@@ -1,9 +1,8 @@
 import * as fs from "fs";
 import * as linq from "linq";
-import * as deepAssign from "deep-assign";
 import * as pathutil from "path";
 import * as stripJsonComments from "strip-json-comments";
-import { Build, log, registeredTasks } from "./index";
+import { Build, log, registeredTasks, merge } from "./index";
 import { VSCodeTask, VSCodeDebugger } from "./vscode-schemas";
 import { MergedStream, GulpTask, BuildCallback } from "./def";
 import { BuildUtil } from "./util";
@@ -31,7 +30,7 @@ export class VSCode
   /** Initializes a new instance. */
   public constructor(cfg?: VSCodeConfig)
   {
-    this.cfg=deepAssign({
+    this.cfg=merge({
       // default config
       prj: process.cwd()
     }, cfg);
@@ -215,7 +214,7 @@ export module VSCodeDebuggers
   export function Node(name: string, js: string, args?: string[], env?: any): VSCodeDebugger
   {
     // merge environment vars
-    env=deepAssign({}, {
+    env=merge({}, {
       "TS_NODE_CACHE_DIRECTORY": "${workspaceRoot}/.node",
       "LOG": "debug"
     }, env);

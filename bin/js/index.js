@@ -2,6 +2,7 @@
 exports.__esModule = true;
 var sh = require("shelljs");
 var $linq = require("linq");
+var lodash = require("lodash");
 var logger = require("./log");
 var util_1 = require("./util");
 exports.BuildUtil = util_1.BuildUtil;
@@ -18,7 +19,7 @@ var vscode_1 = require("./vscode");
 exports.VSCode = vscode_1.VSCode;
 exports.VSCodeDebuggers = vscode_1.VSCodeDebuggers;
 exports.shell = sh;
-exports.merge = require("deep-assign");
+exports.merge = lodash.merge;
 exports.linq = $linq;
 exports.q = $linq.from;
 exports.log = logger;

@@ -2,7 +2,6 @@
 exports.__esModule = true;
 var fs = require("fs");
 var linq = require("linq");
-var deepAssign = require("deep-assign");
 var pathutil = require("path");
 var index_1 = require("./index");
 var util_1 = require("./util");
@@ -13,7 +12,7 @@ var VSCode = /** @class */ (function () {
         this.debuggers = [];
         this.tasks = [];
         this.settings = {};
-        this.cfg = deepAssign({
+        this.cfg = index_1.merge({
             // default config
             prj: process.cwd()
         }, cfg);
@@ -201,7 +200,7 @@ var VSCodeDebuggers;
      */
     function Node(name, js, args, env) {
         // merge environment vars
-        env = deepAssign({}, {
+        env = index_1.merge({}, {
             "TS_NODE_CACHE_DIRECTORY": "${workspaceRoot}/.node",
             "LOG": "debug"
         }, env);

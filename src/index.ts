@@ -1,5 +1,6 @@
 import * as sh from "shelljs";
 import * as $linq from "linq";
+import * as lodash from "lodash";
 import * as logger from "./log";
 import { Build } from "./build";
 
@@ -12,7 +13,7 @@ export { VSCode, VSCodeConfig, VSCodeDebuggers } from "./vscode";
 export { VSCodeTask, VSCodeTaskPresentation, VSCodeDebugger } from "./vscode-schemas";
 export { Gulp as gulp } from "gulp";
 export var shell=sh;
-export var merge=require("deep-assign");
+export var merge=lodash.merge;
 export var linq=$linq;
 export var q=$linq.from;
 export var log=logger;

@@ -3,7 +3,6 @@ exports.__esModule = true;
 var fs = require("fs");
 var linq = require("linq");
 var pathutil = require("path");
-var deepAssign = require("deep-assign");
 var empty = require("gulp-empty");
 var rename = require("gulp-rename");
 var data = require("gulp-data");
@@ -20,6 +19,7 @@ var tpldata = require("gulp-data");
 var async = require("async");
 var def_1 = require("./def");
 var util_1 = require("./util");
+var index_1 = require("./index");
 var log = require("./log");
 var stream_1 = require("./stream");
 var mergeStream = require("merge-stream"); // merge-stream does not support ES6 import
@@ -36,8 +36,8 @@ var Build = /** @class */ (function () {
     /** Initializes the current build. */
     Build.prototype.init = function (cfg) {
         this.cfg = cfg;
-        var clone = deepAssign({}, cfg);
-        this.util = new util_1.BuildUtil(this.cfg = deepAssign(this.cfg, {
+        var clone = index_1.merge({}, cfg);
+        this.util = new util_1.BuildUtil(this.cfg = index_1.merge(this.cfg, {
             // default config
             // default encoding=utf8
             prj: process.cwd(),
@@ -238,7 +238,7 @@ var Build = /** @class */ (function () {
         if (!source)
             source = { isEmpty: function () { return true; } };
         source.logMsg = logMsg || "";
-        source.meta = deepAssign(source.meta || {}, { content: content });
+        source.meta = index_1.merge(source.meta || {}, { content: content });
         return source;
     };
     Build.prototype.copyStatic = function (content) {
@@ -265,7 +265,7 @@ var Build = /** @class */ (function () {
             return null;
         var srcDir = (this.util.getPath(this.dir(src)) || [])[0];
         var destDir = (this.util.getPath(this.dir(dest)) || [])[0];
-        return deepAssign({
+        return index_1.merge({
             // default options
             includeContent: false,
             sourceRoot: pathutil.relative(destDir, srcDir),
@@ -319,7 +319,7 @@ var Build = /** @class */ (function () {
             h[prop] = json;
             json = h;
         }
-        deepAssign(this.cfg, json);
+        index_1.merge(this.cfg, json);
         log.verbose("config set", this.cfg);
         return file;
     };
@@ -340,7 +340,7 @@ var Build = /** @class */ (function () {
                         var filtered = {};
                         linq.from(f).forEach(function (prop) {
                             if (prop[0] == "<")
-                                deepAssign(filtered, json[prop.substr(1)]);
+                                index_1.merge(filtered, json[prop.substr(1)]);
                             else
                                 filtered[prop] = json[prop];
                         });
@@ -354,7 +354,7 @@ var Build = /** @class */ (function () {
         return empty();
     };
     Build.prototype.getJsonVars = function (vars) {
-        return deepAssign({}, this.cfg, {
+        return index_1.merge({}, this.cfg, {
             "vscClassPath": this.vscClassPath,
             "classPath": linq.from(this.classPath).orderBy(function (x) { return x; }).toArray()
         }, vars);
@@ -392,7 +392,7 @@ var Build = /** @class */ (function () {
     };
     Build.prototype.buildTs = function (content) {
         // get config
-        content.options = deepAssign({}, this.cfg.tsc, content.options);
+        content.options = index_1.merge({}, this.cfg.tsc, content.options);
         // set out filename
         if (pathutil.extname(content.js))
             content.options.out = pathutil.basename(content.js);
@@ -445,7 +445,7 @@ var Build = /** @class */ (function () {
     };
     Build.prototype.buildJava = function (content) {
         // get options
-        content.options = deepAssign({}, this.cfg.javac, content.options);
+        content.options = index_1.merge({}, this.cfg.javac, content.options);
         // compile java
         return this.extStream(this.util.src(content.src)
             .pipe(this.javac(content.jar, content.options, content.classPath))

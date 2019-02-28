@@ -1,7 +1,6 @@
 import * as fs from "fs";
 import * as linq from "linq";
 import * as pathutil from "path";
-import * as deepAssign from "deep-assign";
 import * as gulp from "gulp";
 import * as empty from "gulp-empty";
 import * as rename from "gulp-rename";
@@ -20,6 +19,7 @@ import * as async from "async";
 import { BuildConfig, MergedStream, ReadWriteStreamExt, StaticContent, JsonContent, 
          TSContent, SCSSContent, JavaContent, JavacOptions, SourcemapOptions, TplContent, JsonFilter, BuildCallback, BuildContent, BuildContentType, FileContent } from "./def";
 import { BuildUtil } from "./util";
+import { merge } from "./index";
 import * as log from "./log";
 import { GulpStream } from "./stream";
 import { TsConfig } from "gulp-typescript/release/types";
@@ -47,8 +47,8 @@ export class Build
   private init(cfg: BuildConfig)
   {
     this.cfg=cfg;
-    var clone=deepAssign({}, cfg);
-    this.util=new BuildUtil(this.cfg=deepAssign(this.cfg, <BuildConfig> {
+    var clone=merge({}, cfg);
+    this.util=new BuildUtil(this.cfg=merge(this.cfg, <BuildConfig> {
       // default config
       // default encoding=utf8
       prj: process.cwd(),
@@ -315,7 +315,7 @@ export class Build
     if (!source)
       source={ isEmpty: function () { return true; } };
     source.logMsg=logMsg||"";
-    source.meta=deepAssign(source.meta||{}, { content: content });
+    source.meta=merge(source.meta||{}, { content: content });
     return source;
   }
 
@@ -349,7 +349,7 @@ export class Build
       return null;
     var srcDir=(this.util.getPath(this.dir(src)) || [])[0];
     var destDir=(this.util.getPath(this.dir(dest)) || [])[0];
-    return deepAssign(<SourcemapOptions>{
+    return merge(<SourcemapOptions>{
       // default options
       includeContent: false,
       sourceRoot: pathutil.relative(destDir, srcDir),
@@ -422,7 +422,7 @@ export class Build
       json=h;
     }
     
-    deepAssign(this.cfg, json);
+    merge(this.cfg, json);
     log.verbose("config set", this.cfg);
     return file;
   }
@@ -445,7 +445,7 @@ export class Build
             linq.from(<string[]>f).forEach(prop =>
             {
               if (prop[0]=="<")
-                deepAssign(filtered, json[prop.substr(1)]);
+              merge(filtered, json[prop.substr(1)]);
               else
                 filtered[prop]=json[prop];
             });
@@ -461,7 +461,7 @@ export class Build
 
   private getJsonVars(vars?: any): any
   {
-    return deepAssign({}, this.cfg, {
+    return merge({}, this.cfg, {
       "vscClassPath": this.vscClassPath,
       "classPath": linq.from(this.classPath).orderBy(x => x).toArray()
     }, vars);
@@ -506,7 +506,7 @@ export class Build
   private buildTs(content: TSContent)
   {
     // get config
-    content.options=deepAssign({}, this.cfg.tsc, content.options);
+    content.options=merge({}, this.cfg.tsc, content.options);
 
     // set out filename
     if (pathutil.extname(content.js))
@@ -575,7 +575,7 @@ export class Build
   private buildJava(content: JavaContent)
   {
     // get options
-    content.options=deepAssign({}, this.cfg.javac, content.options);
+    content.options=merge({}, this.cfg.javac, content.options);
 
     // compile java
     return this.extStream(this.util.src(content.src)

@@ -5,9 +5,9 @@ import * as concat from "gulp-concat";
 import * as multiDest from "gulp-multi-dest";
 import * as file from "gulp-file";
 import * as data from "gulp-data";
-import * as deepAssign from "deep-assign";
 import { BuildConfig, DestinationMap, ReadWriteStreamExt } from "./def";
 import { BuildUtil } from "./util";
+import { merge } from "./index";
 import * as log from "./log";
 
 /** Extended gulp stream. */
@@ -21,7 +21,7 @@ export class GulpStream
     this.cfg=cfg;
     this.stream=stream;
     if (!this.stream) log.verbose("empty src stream");
-    else if (meta) this.stream.meta=deepAssign(this.stream.meta||{}, meta);
+    else if (meta) this.stream.meta=merge(this.stream.meta||{}, meta);
   }
 
   /** Return the source stream for the specified path. */
@@ -66,7 +66,7 @@ export class GulpStream
     path=BuildUtil.getPath(path, this.cfg);
 
     // add meta to src stream
-    this.stream.meta=deepAssign(this.stream.meta||{}, { dest: path });
+    this.stream.meta=merge(this.stream.meta||{}, { dest: path });
 
     log.silly("dest", path);
     var filename: string;

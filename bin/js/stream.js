@@ -7,8 +7,8 @@ var concat = require("gulp-concat");
 var multiDest = require("gulp-multi-dest");
 var file = require("gulp-file");
 var data = require("gulp-data");
-var deepAssign = require("deep-assign");
 var util_1 = require("./util");
+var index_1 = require("./index");
 var log = require("./log");
 /** Extended gulp stream. */
 var GulpStream = /** @class */ (function () {
@@ -18,7 +18,7 @@ var GulpStream = /** @class */ (function () {
         if (!this.stream)
             log.verbose("empty src stream");
         else if (meta)
-            this.stream.meta = deepAssign(this.stream.meta || {}, meta);
+            this.stream.meta = index_1.merge(this.stream.meta || {}, meta);
     }
     /** Return the source stream for the specified path. */
     GulpStream.src = function (cfg, path) {
@@ -51,7 +51,7 @@ var GulpStream = /** @class */ (function () {
         // get path
         path = util_1.BuildUtil.getPath(path, this.cfg);
         // add meta to src stream
-        this.stream.meta = deepAssign(this.stream.meta || {}, { dest: path });
+        this.stream.meta = index_1.merge(this.stream.meta || {}, { dest: path });
         log.silly("dest", path);
         var filename;
         var destStream;
