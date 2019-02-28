@@ -84,7 +84,7 @@ function formatMetaColored(msg: TransformableInfo)
   linq.from(meta).forEach(m => {
     linq.from(m).forEach(x => {
       if ((mask&LogLevel[x.key])!=0)
-        metaStr+=`\n${"".padEnd(msg.timestamp.length+2-7, " ")} [${"meta".gray}] [${winston.format.colorize().colorize(x.key, x.key)}] ${writeMeta(msg, x.value)}\n`;
+        metaStr+=`\n${"".padEnd(msg.timestamp.length+2-7, " ")} [${"meta".gray}] [${winston.format.colorize().colorize(x.key, x.key)}] ${writeMeta(msg, x.value)}`;
     });
   });
   return metaStr;

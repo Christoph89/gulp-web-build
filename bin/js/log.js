@@ -70,7 +70,7 @@ function formatMetaColored(msg) {
     linq.from(meta).forEach(function (m) {
         linq.from(m).forEach(function (x) {
             if ((exports.mask & LogLevel[x.key]) != 0)
-                metaStr += "\n" + "".padEnd(msg.timestamp.length + 2 - 7, " ") + " [" + "meta".gray + "] [" + winston.format.colorize().colorize(x.key, x.key) + "] " + exports.writeMeta(msg, x.value) + "\n";
+                metaStr += "\n" + "".padEnd(msg.timestamp.length + 2 - 7, " ") + " [" + "meta".gray + "] [" + winston.format.colorize().colorize(x.key, x.key) + "] " + exports.writeMeta(msg, x.value);
         });
     });
     return metaStr;
