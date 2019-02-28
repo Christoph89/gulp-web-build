@@ -51,7 +51,7 @@ export declare class Build {
     /** Reads the specified file. */
     read(path: string): string;
     /** Reads the specified json file. */
-    readJson(path: string): any;
+    readJson(path: string, resolveVars?: boolean): any;
     /** Runs the web build. */
     run(cb: BuildCallback): void;
     private createStream;

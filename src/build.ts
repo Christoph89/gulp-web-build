@@ -255,9 +255,12 @@ export class Build
   }
 
   /** Reads the specified json file. */
-  public readJson(path: string) : any
+  public readJson(path: string, resolveVars: boolean=false) : any
   {
-    return BuildUtil.readJson(path, this.cfg);
+    var json=BuildUtil.readJson(path, this.cfg);
+    if (resolveVars)
+      json=this.resolveRecursive(json);
+    return json;
   }
 
   /** Runs the web build. */

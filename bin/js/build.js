@@ -187,8 +187,12 @@ var Build = /** @class */ (function () {
         return util_1.BuildUtil.read(path, this.cfg);
     };
     /** Reads the specified json file. */
-    Build.prototype.readJson = function (path) {
-        return util_1.BuildUtil.readJson(path, this.cfg);
+    Build.prototype.readJson = function (path, resolveVars) {
+        if (resolveVars === void 0) { resolveVars = false; }
+        var json = util_1.BuildUtil.readJson(path, this.cfg);
+        if (resolveVars)
+            json = this.resolveRecursive(json);
+        return json;
     };
     /** Runs the web build. */
     Build.prototype.run = function (cb) {
