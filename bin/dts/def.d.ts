@@ -19,6 +19,7 @@ export interface BuildConfig {
     [vars: string]: any;
 }
 export interface ReadWriteStreamExt extends NodeJS.ReadWriteStream {
+    isEmpty?: () => boolean;
     logMsg?: string;
     meta?: any;
 }

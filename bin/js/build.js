@@ -194,7 +194,7 @@ var Build = /** @class */ (function () {
             .select(function (content, idx) {
             return function (next) {
                 var stream = build.createStream(content);
-                if (stream) {
+                if (stream && (!stream.isEmpty || !stream.isEmpty())) {
                     log.debug("Start " + stream.logMsg, { debug: stream.meta });
                     stream.on("finish", function (err, res) {
                         log.debug("Finished " + stream.logMsg, { debug: stream.meta });
@@ -210,7 +210,7 @@ var Build = /** @class */ (function () {
                     });
                 }
                 else {
-                    log.warn("Skipped undefined stream!");
+                    log.warn("Skipped empty stream!", stream ? stream.logMsg : null);
                     if (next)
                         next(undefined, undefined);
                     next = null;
@@ -235,10 +235,10 @@ var Build = /** @class */ (function () {
         return null;
     };
     Build.prototype.extStream = function (source, logMsg, content) {
-        if (source && (!source.isEmpty || !source.isEmpty())) {
-            source.logMsg = logMsg || "";
-            source.meta = deepAssign(source.meta || {}, { content: content });
-        }
+        if (!source)
+            source = { isEmpty: function () { return false; } };
+        source.logMsg = logMsg || "";
+        source.meta = deepAssign(source.meta || {}, { content: content });
         return source;
     };
     Build.prototype.copyStatic = function (content) {

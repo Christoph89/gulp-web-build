@@ -265,7 +265,7 @@ export class Build
         return function (next)
         {
           var stream=build.createStream(content);
-          if (stream)
+          if (stream && (!stream.isEmpty || !stream.isEmpty()))
           {
             log.debug("Start "+stream.logMsg, { debug: stream.meta });
             stream.on("finish", (err, res) => 
@@ -283,7 +283,7 @@ export class Build
           }
           else
           {
-            log.warn("Skipped undefined stream!");
+            log.warn("Skipped empty stream!", stream?stream.logMsg:null);
             if (next) next(undefined, undefined);
             next=null;
           }
@@ -312,11 +312,10 @@ export class Build
 
   private extStream(source: any, logMsg: string, content: BuildContent): ReadWriteStreamExt
   {
-    if (source && (!source.isEmpty || !source.isEmpty()))
-    {
-      source.logMsg=logMsg||"";
-      source.meta=deepAssign(source.meta||{}, { content: content });
-    }
+    if (!source)
+      source={ isEmpty: function () { return false; } };
+    source.logMsg=logMsg||"";
+    source.meta=deepAssign(source.meta||{}, { content: content });
     return source;
   }
 

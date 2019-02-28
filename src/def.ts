@@ -22,6 +22,7 @@ export interface BuildConfig
 
 export interface ReadWriteStreamExt extends NodeJS.ReadWriteStream 
 {
+  isEmpty?: () => boolean;
   logMsg?: string;
   meta?: any;
 }
