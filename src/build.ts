@@ -313,7 +313,7 @@ export class Build
   private extStream(source: any, logMsg: string, content: BuildContent): ReadWriteStreamExt
   {
     if (!source)
-      source={ isEmpty: function () { return false; } };
+      source={ isEmpty: function () { return true; } };
     source.logMsg=logMsg||"";
     source.meta=deepAssign(source.meta||{}, { content: content });
     return source;

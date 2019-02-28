@@ -236,7 +236,7 @@ var Build = /** @class */ (function () {
     };
     Build.prototype.extStream = function (source, logMsg, content) {
         if (!source)
-            source = { isEmpty: function () { return false; } };
+            source = { isEmpty: function () { return true; } };
         source.logMsg = logMsg || "";
         source.meta = deepAssign(source.meta || {}, { content: content });
         return source;
