@@ -22,6 +22,7 @@ export interface ReadWriteStreamExt extends NodeJS.ReadWriteStream {
     isEmpty?: () => boolean;
     logMsg?: string;
     meta?: any;
+    waitFinish?: (clb: () => void) => void;
 }
 /** Merge stream. */
 export interface MergedStream extends NodeJS.ReadWriteStream {

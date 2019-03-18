@@ -39,7 +39,9 @@ export class Clean
   {
     return del(this.paths, { force: true }).then(paths =>
     {
-      log.info("Deleted "+(paths||[]).length+" file(s). "+JSON.stringify(paths, null, "  "));
+      if (!paths) paths=[];
+      var writeLog=paths.length?log.info:log.debug;
+      writeLog("Deleted "+paths.length+" file(s). "+JSON.stringify(paths, null, "  "));
       cb();
     });
   }

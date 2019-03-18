@@ -279,9 +279,18 @@ export class Build
             log.debug("Start "+stream.logMsg, { debug: stream.meta });
             stream.on("finish", (err, res) => 
             {
-              log.debug("Finished "+stream.logMsg, { debug: stream.meta });
-              if (next) next(err, res);
-              next=null;
+              if (!stream.waitFinish)
+              {
+                log.debug("Finished "+stream.logMsg, { debug: stream.meta });
+                if (next) next(err, res);
+                next=null;
+              }
+              else
+                stream.waitFinish(() => {
+                  log.debug("Finished "+stream.logMsg, { debug: stream.meta });
+                  if (next) next(err, res);
+                  next=null;
+                });
             })
             .on("error", (err) => 
             {
@@ -319,12 +328,13 @@ export class Build
     return null;
   }
 
-  private extStream(source: any, logMsg: string, content: BuildContent): ReadWriteStreamExt
+  private extStream(source: any, logMsg: string, content: BuildContent, waitFinish?: (clb: () => void) => void): ReadWriteStreamExt
   {
     if (!source)
       source={ isEmpty: function () { return true; } };
     source.logMsg=logMsg||"";
     source.meta=merge(source.meta||{}, { content: content });
+    source.waitFinish=waitFinish||null;
     return source;
   }
 
@@ -346,10 +356,28 @@ export class Build
     var getData=typeof content.data=="function"
       ?function (f) { return content.data(f, content); }
       :function (f){ return content.data; };
+    
+    var input=this.resolve(content.path);
+    var output: string[]=(typeof content.dest=="string")?[content.dest]:content.dest;
+    var files=linq.from(input).selectMany(i => linq.from(output).select(o => pathutil.extname(o)?o:pathutil.join(o, pathutil.basename(i)))).toArray();
+    log.silly("Tpl output files", files);
+
     return this.extStream(this.util.src(content.src)
       .pipe(tpldata(getData))
-      .pipe(tplrender({ path: this.resolve(content.path) }))
-      .dest(content.dest), "render tpl", content);
+      .pipe(tplrender({ path: input }))
+      .dest(content.dest), "render tpl", content, (clb) => {
+        // wait finish task until tpl has been rendered
+        var wait=setInterval(() => 
+        {
+          if (linq.from(files).all(f => fs.existsSync(f)))
+          {
+            clb();
+            clearInterval(wait);
+          }
+          else
+            log.silly("Wait for tpl output");
+        }, 100);
+      });
   }
 
   private extendSourcemapOpts(opts: SourcemapOptions, src: string, dest: string): SourcemapOptions

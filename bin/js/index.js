@@ -9,6 +9,7 @@ exports.BuildUtil = util_1.BuildUtil;
 exports.task = util_1.task;
 exports.runTask = util_1.runTask;
 exports.series = util_1.series;
+exports.parallel = util_1.parallel;
 exports.registeredTasks = util_1.registeredTasks;
 exports.zip = util_1.zip;
 var build_1 = require("./build");

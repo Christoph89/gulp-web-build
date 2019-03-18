@@ -39,7 +39,10 @@ var Clean = /** @class */ (function () {
     /** Deletes all specified paths. */
     Clean.prototype.run = function (cb) {
         return del(this.paths, { force: true }).then(function (paths) {
-            index_1.log.info("Deleted " + (paths || []).length + " file(s). " + JSON.stringify(paths, null, "  "));
+            if (!paths)
+                paths = [];
+            var writeLog = paths.length ? index_1.log.info : index_1.log.debug;
+            writeLog("Deleted " + paths.length + " file(s). " + JSON.stringify(paths, null, "  "));
             cb();
         });
     };

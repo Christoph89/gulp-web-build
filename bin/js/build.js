@@ -205,10 +205,19 @@ var Build = /** @class */ (function () {
                 if (stream && (!stream.isEmpty || !stream.isEmpty())) {
                     log.debug("Start " + stream.logMsg, { debug: stream.meta });
                     stream.on("finish", function (err, res) {
-                        log.debug("Finished " + stream.logMsg, { debug: stream.meta });
-                        if (next)
-                            next(err, res);
-                        next = null;
+                        if (!stream.waitFinish) {
+                            log.debug("Finished " + stream.logMsg, { debug: stream.meta });
+                            if (next)
+                                next(err, res);
+                            next = null;
+                        }
+                        else
+                            stream.waitFinish(function () {
+                                log.debug("Finished " + stream.logMsg, { debug: stream.meta });
+                                if (next)
+                                    next(err, res);
+                                next = null;
+                            });
                     })
                         .on("error", function (err) {
                         log.error(err);
@@ -242,11 +251,12 @@ var Build = /** @class */ (function () {
         }
         return null;
     };
-    Build.prototype.extStream = function (source, logMsg, content) {
+    Build.prototype.extStream = function (source, logMsg, content, waitFinish) {
         if (!source)
             source = { isEmpty: function () { return true; } };
         source.logMsg = logMsg || "";
         source.meta = index_1.merge(source.meta || {}, { content: content });
+        source.waitFinish = waitFinish || null;
         return source;
     };
     Build.prototype.copyStatic = function (content) {
@@ -263,10 +273,24 @@ var Build = /** @class */ (function () {
         var getData = typeof content.data == "function"
             ? function (f) { return content.data(f, content); }
             : function (f) { return content.data; };
+        var input = this.resolve(content.path);
+        var output = (typeof content.dest == "string") ? [content.dest] : content.dest;
+        var files = linq.from(input).selectMany(function (i) { return linq.from(output).select(function (o) { return pathutil.extname(o) ? o : pathutil.join(o, pathutil.basename(i)); }); }).toArray();
+        log.silly("Tpl output files", files);
         return this.extStream(this.util.src(content.src)
             .pipe(tpldata(getData))
-            .pipe(tplrender({ path: this.resolve(content.path) }))
-            .dest(content.dest), "render tpl", content);
+            .pipe(tplrender({ path: input }))
+            .dest(content.dest), "render tpl", content, function (clb) {
+            // wait finish task until tpl has been rendered
+            var wait = setInterval(function () {
+                if (linq.from(files).all(function (f) { return fs.existsSync(f); })) {
+                    clb();
+                    clearInterval(wait);
+                }
+                else
+                    log.silly("Wait for tpl output");
+            }, 100);
+        });
     };
     Build.prototype.extendSourcemapOpts = function (opts, src, dest) {
         if (!src || !dest)
