@@ -6,8 +6,10 @@ import { TaskFunction } from "undertaker";
 export declare function task(name: string, ...tasks: Task[]): void;
 /** Returns a dependency series */
 export declare function series(...tasks: Task[]): TaskFunction;
+export declare function series(tasks: Task[]): TaskFunction;
 /** Returns a dependency parallel */
 export declare function parallel(...tasks: Task[]): TaskFunction;
+export declare function parallel(tasks: Task[]): TaskFunction;
 /** Runs the specified task synchronously. */
 export declare function runTask(name: string, ...args: string[]): void;
 /** Returns all registered tasks. */

@@ -5,7 +5,7 @@ import { merge } from "./index";
 import * as colors from "colors";
 require("colors");
 
-enum LogLevel
+export enum LogLevel
 {
   none=0,
   error=1<<0,
@@ -28,24 +28,31 @@ export enum LogMask
 }
 
 // log utils
-export var logLevel=(process.env.log || process.env.LOG || "info").toLowerCase();
-export var mask=LogMask[logLevel];
+var lvlName=(process.env.log || process.env.LOG || "info").toLowerCase();
+export var mask: LogMask=LogMask[lvlName];
+if (mask==undefined) mask=LogMask.info;
 
 // create winston logger
-var logger=winston.createLogger({
-  level: logLevel,
-  transports: [
-    new winston.transports.Console({
-      format: getFormat(logLevel, process.env.NODE_ENV),
-    })
-  ]
-});
+var logger=init(mask);
+
+/** Initializes a logger. */
+function init(mask: LogMask): winston.Logger
+{
+  return winston.createLogger({
+    level: LogMask[mask],
+    transports: [
+      new winston.transports.Console({
+        format: getFormat(mask, process.env.NODE_ENV),
+      })
+    ]
+  });
+}
 
 /** Returns the combined log format. */
-function getFormat(logLevel: string, env: string)
+function getFormat(mask: LogMask, env: string)
 {
   var formats=[];
-  formats.push(winston.format.timestamp({ format: logLevel=="debug"||logLevel=="silly"||env=="production"?null:"hh:mm:ss" }));
+  formats.push(winston.format.timestamp({ format: mask==LogMask.debug||mask==LogMask.silly||env=="production"?null:"hh:mm:ss" }));
   formats.push(winston.format.printf(env=="production"?formatLogMsg:formatLogMsgColored));
   return winston.format.combine(...formats);
 }
@@ -123,6 +130,19 @@ function getMeta(logLevel: string, meta: (LogMeta|any)[])
     m[logLevel]=x;
     return m;
   }).toArray() };
+}
+
+/** Sets the log mask. */
+export function setMask(logMask: LogMask)
+{
+  if (logMask==undefined)
+  {
+    error(`Invalid log mask ${logMask}`);
+    return;
+  }
+
+  // reinit logger
+  logger=init(mask=logMask);
 }
 
 export function error(msg: string, ...meta: (LogMeta|any)[]) { logger.error(msg, getMeta("error", meta)); }

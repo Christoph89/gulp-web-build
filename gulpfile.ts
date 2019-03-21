@@ -1,9 +1,4 @@
 import * as $ from "./src/index";
-import * as gulp from "gulp";
-import * as data from "gulp-data";
-import * as fs from "fs";
-import { relative } from "path";
-import * as jmerge from "gulp-merge-json";
 
 /** Installs all dependencies and prepares the project. */
 $.task("prep", function prep_fn (cb) {

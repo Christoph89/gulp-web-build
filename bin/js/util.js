@@ -36,7 +36,6 @@ function task(name) {
 }
 exports.task = task;
 ;
-/** Returns a dependency series */
 function series() {
     var tasks = [];
     for (var _i = 0; _i < arguments.length; _i++) {
@@ -45,7 +44,6 @@ function series() {
     return gulp.series(tasks);
 }
 exports.series = series;
-/** Returns a dependency parallel */
 function parallel() {
     var tasks = [];
     for (var _i = 0; _i < arguments.length; _i++) {

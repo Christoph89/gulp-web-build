@@ -1,11 +1,11 @@
 {
   "name": "gulp-web-build",
-  "version": "3.1.9",
+  "version": "3.1.10",
   "description": "Util for building web applications.",
   "main": "./bin/js/index.js",
   "types": "./bin/dts/index.d.ts",
   "scripts": {
-    "prepare": "gulp build"
+    "prepare": "gulp rebuild"
   },
   "repository": {
     "type": "git",

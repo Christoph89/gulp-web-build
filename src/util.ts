@@ -38,13 +38,17 @@ export function task(name: string, ...tasks: Task[])
 };
 
 /** Returns a dependency series */
-export function series(...tasks: Task[]): TaskFunction
+export function series(...tasks: Task[]): TaskFunction;
+export function series(tasks: Task[]): TaskFunction;
+export function series(...tasks: any): TaskFunction
 {
   return gulp.series(tasks);
 }
 
 /** Returns a dependency parallel */
-export function parallel(...tasks: Task[]): TaskFunction
+export function parallel(...tasks: Task[]): TaskFunction;
+export function parallel(tasks: Task[]): TaskFunction;
+export function parallel(...tasks: any): TaskFunction
 {
   return gulp.parallel(tasks);
 }

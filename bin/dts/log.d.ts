@@ -1,4 +1,13 @@
 import { TransformableInfo } from "logform";
+export declare enum LogLevel {
+    none = 0,
+    error = 1,
+    warn = 2,
+    info = 4,
+    verbose = 8,
+    debug = 16,
+    silly = 32
+}
 export declare enum LogMask {
     none = 0,
     error = 1,
@@ -8,8 +17,7 @@ export declare enum LogMask {
     debug = 31,
     silly = 63
 }
-export declare var logLevel: string;
-export declare var mask: any;
+export declare var mask: LogMask;
 export declare var writeMeta: (msg: TransformableInfo, meta: any) => string;
 /** Defines log meta. */
 export interface LogMeta {
@@ -20,6 +28,8 @@ export interface LogMeta {
     debug?: any;
     silly?: any;
 }
+/** Sets the log mask. */
+export declare function setMask(logMask: LogMask): void;
 export declare function error(msg: string, ...meta: (LogMeta | any)[]): void;
 export declare function warn(msg: string, ...meta: (LogMeta | any)[]): void;
 export declare function info(msg: string, ...meta: (LogMeta | any)[]): void;

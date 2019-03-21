@@ -12,7 +12,7 @@ var LogLevel;
     LogLevel[LogLevel["verbose"] = 8] = "verbose";
     LogLevel[LogLevel["debug"] = 16] = "debug";
     LogLevel[LogLevel["silly"] = 32] = "silly";
-})(LogLevel || (LogLevel = {}));
+})(LogLevel = exports.LogLevel || (exports.LogLevel = {}));
 var LogMask;
 (function (LogMask) {
     LogMask[LogMask["none"] = 0] = "none";
@@ -24,22 +24,28 @@ var LogMask;
     LogMask[LogMask["silly"] = 63] = "silly";
 })(LogMask = exports.LogMask || (exports.LogMask = {}));
 // log utils
-exports.logLevel = (process.env.log || process.env.LOG || "info").toLowerCase();
-exports.mask = LogMask[exports.logLevel];
+var lvlName = (process.env.log || process.env.LOG || "info").toLowerCase();
+exports.mask = LogMask[lvlName];
+if (exports.mask == undefined)
+    exports.mask = LogMask.info;
 // create winston logger
-var logger = winston.createLogger({
-    level: exports.logLevel,
-    transports: [
-        new winston.transports.Console({
-            format: getFormat(exports.logLevel, process.env.NODE_ENV)
-        })
-    ]
-});
+var logger = init(exports.mask);
+/** Initializes a logger. */
+function init(mask) {
+    return winston.createLogger({
+        level: LogMask[mask],
+        transports: [
+            new winston.transports.Console({
+                format: getFormat(mask, process.env.NODE_ENV)
+            })
+        ]
+    });
+}
 /** Returns the combined log format. */
-function getFormat(logLevel, env) {
+function getFormat(mask, env) {
     var _a;
     var formats = [];
-    formats.push(winston.format.timestamp({ format: logLevel == "debug" || logLevel == "silly" || env == "production" ? null : "hh:mm:ss" }));
+    formats.push(winston.format.timestamp({ format: mask == LogMask.debug || mask == LogMask.silly || env == "production" ? null : "hh:mm:ss" }));
     formats.push(winston.format.printf(env == "production" ? formatLogMsg : formatLogMsgColored));
     return (_a = winston.format).combine.apply(_a, formats);
 }
@@ -93,6 +99,16 @@ function getMeta(logLevel, meta) {
             return m;
         }).toArray() };
 }
+/** Sets the log mask. */
+function setMask(logMask) {
+    if (logMask == undefined) {
+        error("Invalid log mask " + logMask);
+        return;
+    }
+    // reinit logger
+    logger = init(exports.mask = logMask);
+}
+exports.setMask = setMask;
 function error(msg) {
     var meta = [];
     for (var _i = 1; _i < arguments.length; _i++) {
