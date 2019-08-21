@@ -20,11 +20,22 @@ export interface BuildConfig
   [vars: string]: any;
 }
 
-export interface ReadWriteStreamExt extends NodeJS.ReadWriteStream 
+/** Base stream */
+export interface StreamBase
 {
-  isEmpty?: () => boolean;
   logMsg?: string;
   meta?: any;
+}
+
+/** Specifies a custom stream. */
+export interface CustomStream extends StreamBase
+{
+  run: (cb: (err, res) => void) => void;
+}
+
+export interface ReadWriteStreamExt extends NodeJS.ReadWriteStream, StreamBase
+{
+  isEmpty?: () => boolean;
   waitFinish?: (clb: () => void) => void;
 }
 
@@ -57,7 +68,8 @@ export enum BuildContentType
   Typescript,
   Scss,
   Json,
-  Java
+  Java,
+  Custom
 }
 
 /** Specifies build content. */
@@ -133,6 +145,14 @@ export interface JsonContent extends BuildContent
 export interface JsonFilter
 {
   (json: any) : any;
+}
+
+/** Specifies python content. */
+export interface CustomContent extends BuildContent
+{
+  logMsg?: string;
+  meta?: any;
+  run: (cb: (err, res) => void) => void;
 }
 
 /** Specifies a gulp task. */

@@ -96,6 +96,16 @@ var Build = /** @class */ (function () {
             });
         return this;
     };
+    /** Adds python content. */
+    Build.prototype.addCustom = function (run, logMsg, meta) {
+        this.buildContent.push({
+            contentType: def_1.BuildContentType.Custom,
+            run: run,
+            logMsg: logMsg,
+            meta: meta
+        });
+        return this;
+    };
     /** Extends the config by the specified json file. */
     Build.prototype.config = function (src, filter, replaceVars) {
         var _this = this;
@@ -202,18 +212,30 @@ var Build = /** @class */ (function () {
             .select(function (content, idx) {
             return function (next) {
                 var stream = build.createStream(content);
-                if (stream && (!stream.isEmpty || !stream.isEmpty())) {
-                    log.debug("Start " + stream.logMsg, { debug: stream.meta });
-                    stream.on("finish", function (err, res) {
-                        if (!stream.waitFinish) {
-                            log.debug("Finished " + stream.logMsg, { debug: stream.meta });
+                var cstream = stream;
+                var rwstream = stream;
+                if (cstream && cstream.run) {
+                    log.debug("Start " + cstream.logMsg, { debug: cstream.meta });
+                    cstream.run(function (err, res) {
+                        if (err)
+                            log.error(err);
+                        log.debug("Finished " + cstream.logMsg, { debug: cstream.meta });
+                        if (next)
+                            next(err, res);
+                    });
+                }
+                else if (rwstream && (!rwstream.isEmpty || !rwstream.isEmpty())) {
+                    log.debug("Start " + rwstream.logMsg, { debug: rwstream.meta });
+                    rwstream.on("finish", function (err, res) {
+                        if (!rwstream.waitFinish) {
+                            log.debug("Finished " + rwstream.logMsg, { debug: rwstream.meta });
                             if (next)
                                 next(err, res);
                             next = null;
                         }
                         else
-                            stream.waitFinish(function () {
-                                log.debug("Finished " + stream.logMsg, { debug: stream.meta });
+                            rwstream.waitFinish(function () {
+                                log.debug("Finished " + rwstream.logMsg, { debug: rwstream.meta });
                                 if (next)
                                     next(err, res);
                                 next = null;
@@ -227,7 +249,7 @@ var Build = /** @class */ (function () {
                     });
                 }
                 else {
-                    log.warn("Skipped empty stream!", stream ? stream.logMsg : null);
+                    log.warn("Skipped empty stream!", rwstream ? rwstream.logMsg : null);
                     if (next)
                         next(undefined, undefined);
                     next = null;
@@ -248,6 +270,7 @@ var Build = /** @class */ (function () {
             case def_1.BuildContentType.Typescript: return this.buildTs(content);
             case def_1.BuildContentType.Scss: return this.buildScss(content);
             case def_1.BuildContentType.Java: return this.buildJava(content);
+            case def_1.BuildContentType.Custom: return this.buildCustom(content);
         }
         return null;
     };
@@ -482,6 +505,13 @@ var Build = /** @class */ (function () {
         return this.extStream(this.util.src(content.src)
             .pipe(this.javac(content.jar, content.options, content.classPath))
             .dest(pathutil.dirname(content.jar)), "build java", content);
+    };
+    Build.prototype.buildCustom = function (content) {
+        return {
+            logMsg: content.logMsg || "build custom",
+            meta: content.meta,
+            run: content.run
+        };
     };
     return Build;
 }());

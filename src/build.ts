@@ -17,12 +17,11 @@ import * as tplrender from "gulp-nunjucks-render";
 import * as tpldata from "gulp-data";
 import * as async from "async"; 
 import { BuildConfig, MergedStream, ReadWriteStreamExt, StaticContent, JsonContent, 
-         TSContent, SCSSContent, JavaContent, JavacOptions, SourcemapOptions, TplContent, JsonFilter, BuildCallback, BuildContent, BuildContentType, FileContent } from "./def";
+         TSContent, SCSSContent, JavaContent, JavacOptions, SourcemapOptions, TplContent, JsonFilter, BuildCallback, BuildContent, BuildContentType, FileContent, CustomContent, CustomStream } from "./def";
 import { BuildUtil } from "./util";
 import { merge } from "./index";
 import * as log from "./log";
 import { GulpStream } from "./stream";
-import { TsConfig } from "gulp-typescript/release/types";
 var mergeStream=require("merge-stream"); // merge-stream does not support ES6 import
 
 /** Class for building web applications. */
@@ -134,6 +133,18 @@ export class Build
         extend: extend, 
         replaceVars: replaceVars 
       });
+    return this;
+  }
+
+  /** Adds python content. */
+  public addCustom(run: (cb: (err, res) => void) => void, logMsg?: string, meta?: any): Build
+  {
+    this.buildContent.push(<CustomContent>{
+      contentType: BuildContentType.Custom,
+      run: run,
+      logMsg: logMsg,
+      meta: meta
+    });
     return this;
   }
 
@@ -274,20 +285,32 @@ export class Build
         return function (next)
         {
           var stream=build.createStream(content);
-          if (stream && (!stream.isEmpty || !stream.isEmpty()))
+          var cstream=(<CustomStream>stream);
+          var rwstream=(<ReadWriteStreamExt>stream);
+          if (cstream && cstream.run)
           {
-            log.debug("Start "+stream.logMsg, { debug: stream.meta });
-            stream.on("finish", (err, res) => 
+            log.debug("Start "+cstream.logMsg, { debug: cstream.meta });
+            cstream.run((err, res) =>
             {
-              if (!stream.waitFinish)
+              if (err) log.error(err);
+              log.debug("Finished "+cstream.logMsg, { debug: cstream.meta });
+              if (next) next(err, res);
+            });
+          }
+          else if (rwstream && (!rwstream.isEmpty || !rwstream.isEmpty()))
+          {
+            log.debug("Start "+rwstream.logMsg, { debug: rwstream.meta });
+            rwstream.on("finish", (err, res) => 
+            {
+              if (!rwstream.waitFinish)
               {
-                log.debug("Finished "+stream.logMsg, { debug: stream.meta });
+                log.debug("Finished "+rwstream.logMsg, { debug: rwstream.meta });
                 if (next) next(err, res);
                 next=null;
               }
               else
-                stream.waitFinish(() => {
-                  log.debug("Finished "+stream.logMsg, { debug: stream.meta });
+                rwstream.waitFinish(() => {
+                  log.debug("Finished "+rwstream.logMsg, { debug: rwstream.meta });
                   if (next) next(err, res);
                   next=null;
                 });
@@ -301,7 +324,7 @@ export class Build
           }
           else
           {
-            log.warn("Skipped empty stream!", stream?stream.logMsg:null);
+            log.warn("Skipped empty stream!", rwstream?rwstream.logMsg:null);
             if (next) next(undefined, undefined);
             next=null;
           }
@@ -313,7 +336,7 @@ export class Build
       });
   }
 
-  private createStream(content: BuildContent): ReadWriteStreamExt
+  private createStream(content: BuildContent): ReadWriteStreamExt | CustomStream
   {
     switch (content.contentType)
     {
@@ -324,6 +347,7 @@ export class Build
       case BuildContentType.Typescript: return this.buildTs(<TSContent>content);
       case BuildContentType.Scss: return this.buildScss(<SCSSContent>content);
       case BuildContentType.Java: return this.buildJava(<JavaContent>content);
+      case BuildContentType.Custom: return this.buildCustom(<CustomContent>content);
     }
     return null;
   }
@@ -618,5 +642,14 @@ export class Build
     return this.extStream(this.util.src(content.src)
       .pipe(this.javac(content.jar, content.options, content.classPath))
       .dest(pathutil.dirname(content.jar)), "build java", content);
+  }
+
+  private buildCustom(content: CustomContent): CustomStream
+  {
+    return {
+      logMsg: content.logMsg || "build custom",
+      meta: content.meta,
+      run: content.run
+    }
   }
 }

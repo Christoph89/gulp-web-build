@@ -5,7 +5,7 @@ import * as concat from "gulp-concat";
 import * as multiDest from "gulp-multi-dest";
 import * as file from "gulp-file";
 import * as data from "gulp-data";
-import { BuildConfig, DestinationMap, ReadWriteStreamExt } from "./def";
+import { BuildConfig, DestinationMap, ReadWriteStreamExt, BuildCallback } from "./def";
 import { BuildUtil } from "./util";
 import { merge } from "./index";
 import * as log from "./log";

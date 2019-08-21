@@ -10,4 +10,5 @@ var BuildContentType;
     BuildContentType[BuildContentType["Scss"] = 4] = "Scss";
     BuildContentType[BuildContentType["Json"] = 5] = "Json";
     BuildContentType[BuildContentType["Java"] = 6] = "Java";
+    BuildContentType[BuildContentType["Custom"] = 7] = "Custom";
 })(BuildContentType = exports.BuildContentType || (exports.BuildContentType = {}));

@@ -33,6 +33,8 @@ export declare class Build {
      */
     addJson(content: JsonContent): Build;
     addJson(src: string | any, dest: string | any, extend?: any, base?: any, replaceVars?: boolean): Build;
+    /** Adds python content. */
+    addCustom(run: (cb: (err: any, res: any) => void) => void, logMsg?: string, meta?: any): Build;
     /** Extends the config by the specified json file. */
     config(src: string | string[] | any, filter?: string[] | JsonFilter | (string[] | JsonFilter)[], replaceVars?: boolean): Build;
     /** Adds typescript content. */
@@ -75,4 +77,5 @@ export declare class Build {
     private buildScss;
     private javac;
     private buildJava;
+    private buildCustom;
 }
