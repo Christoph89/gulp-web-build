@@ -50,6 +50,8 @@ var GulpStream = /** @class */ (function () {
             return this.stream.pipe(data(path));
         // get path
         path = util_1.BuildUtil.getPath(path, this.cfg);
+        if (path && path.length == 1)
+            path = path[0];
         // add meta to src stream
         this.stream.meta = index_1.merge(this.stream.meta || {}, { dest: path });
         log.silly("dest", path);
@@ -69,6 +71,7 @@ var GulpStream = /** @class */ (function () {
                 filename = pathutil.basename(p);
                 return pathutil.dirname(p);
             }).toArray();
+            // @@todo multiDest calls finish before files are copied
             if (filename)
                 destStream = this.stream.pipe(concat(filename)).pipe(multiDest(paths));
             else

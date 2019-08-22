@@ -64,6 +64,8 @@ export class GulpStream
 
     // get path
     path=BuildUtil.getPath(path, this.cfg);
+    if (path && path.length==1)
+      path=path[0];
 
     // add meta to src stream
     this.stream.meta=merge(this.stream.meta||{}, { dest: path });
@@ -89,6 +91,7 @@ export class GulpStream
         return pathutil.dirname(p);
       }).toArray();
 
+      // @@todo multiDest calls finish before files are copied
       if (filename)
         destStream=this.stream.pipe(concat(filename)).pipe(multiDest(paths));
       else
