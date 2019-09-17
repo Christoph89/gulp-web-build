@@ -12,21 +12,21 @@ var Clean = /** @class */ (function () {
     }
     /** Deletes the specified paths. */
     Clean.prototype.del = function () {
+        var _a;
         var paths = [];
         for (var _i = 0; _i < arguments.length; _i++) {
             paths[_i] = arguments[_i];
         }
-        var _a;
         (_a = this.paths).push.apply(_a, paths);
         return this;
     };
     /** Deletes all files excluded from vs code but leaves the specified paths. */
     Clean.prototype.delVSCodeExcludes = function () {
+        var _a;
         var leave = [];
         for (var _i = 0; _i < arguments.length; _i++) {
             leave[_i] = arguments[_i];
         }
-        var _a;
         if (!leave)
             leave = [];
         if (!this.vscSettings)

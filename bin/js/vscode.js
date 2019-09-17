@@ -21,21 +21,21 @@ var VSCode = /** @class */ (function () {
     }
     /** Adds a debugger. */
     VSCode.prototype.addDebugger = function () {
+        var _a;
         var dbg = [];
         for (var _i = 0; _i < arguments.length; _i++) {
             dbg[_i] = arguments[_i];
         }
-        var _a;
         (_a = this.debuggers).push.apply(_a, linq.from(dbg).selectMany(function (x) { return Array.isArray(x) ? x : [x]; }).toArray());
         return this;
     };
     /** Add a task. */
     VSCode.prototype.addTask = function () {
+        var _a;
         var task = [];
         for (var _i = 0; _i < arguments.length; _i++) {
             task[_i] = arguments[_i];
         }
-        var _a;
         (_a = this.tasks).push.apply(_a, task);
         return this;
     };
@@ -70,11 +70,11 @@ var VSCode = /** @class */ (function () {
     };
     /** Adds the specified java dependencies to settings.json. */
     VSCode.prototype.addJavaClasspath = function () {
+        var _a;
         var dependencies = [];
         for (var _i = 0; _i < arguments.length; _i++) {
             dependencies[_i] = arguments[_i];
         }
-        var _a;
         if (!this.settings["java.classPath"])
             this.settings["java.classPath"] = [];
         (_a = this.settings["java.classPath"]).push.apply(_a, dependencies);
