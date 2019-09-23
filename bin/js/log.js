@@ -33,7 +33,7 @@ if (lvlName.indexOf(",")) {
     lvlName = parts[0];
     if (parts.length > 1) {
         logDir = path.dirname(parts[1]);
-        logFile = path.basename(parts[1]);
+        logFile = path.basename(parts[1]).replace("DATE", "%DATE%");
     }
 }
 lvlName = lvlName.toLowerCase();
