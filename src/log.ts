@@ -1,5 +1,7 @@
 import * as linq from "linq";
 import * as winston from "winston";
+import * as rotate from "winston-daily-rotate-file";
+import * as path from "path";
 import { TransformableInfo } from "logform";
 import { merge } from "./index";
 import * as colors from "colors";
@@ -28,7 +30,19 @@ export enum LogMask
 }
 
 // log utils
-var lvlName=(process.env.log || process.env.LOG || "info").toLowerCase();
+var lvlName=(process.env.log || process.env.LOG || "info");
+var logDir, logFile;
+if (lvlName.indexOf(","))
+{
+  var parts=lvlName.split(",");
+  lvlName=parts[0];
+  if (parts.length>1)
+  {
+    logDir=path.dirname(parts[1]);
+    logFile=path.basename(parts[1]);
+  }
+}
+lvlName=lvlName.toLowerCase();
 export var mask: LogMask=LogMask[lvlName];
 if (mask==undefined) mask=LogMask.info;
 
@@ -38,12 +52,23 @@ var logger=init(mask);
 /** Initializes a logger. */
 function init(mask: LogMask): winston.Logger
 {
+  var transport;
+  if (logDir && logFile)
+    transport=new rotate({
+      filename: logFile,
+      dirname: logDir,
+      datePattern: 'YYYY-MM-DD',
+      zippedArchive: true
+    });
+  else
+    transport=new winston.transports.Console({
+      format: getFormat(mask, process.env.NODE_ENV),
+    });
+
   return winston.createLogger({
     level: LogMask[mask],
     transports: [
-      new winston.transports.Console({
-        format: getFormat(mask, process.env.NODE_ENV),
-      })
+      transport
     ]
   });
 }

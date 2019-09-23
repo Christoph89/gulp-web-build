@@ -2,6 +2,8 @@
 exports.__esModule = true;
 var linq = require("linq");
 var winston = require("winston");
+var rotate = require("winston-daily-rotate-file");
+var path = require("path");
 require("colors");
 var LogLevel;
 (function (LogLevel) {
@@ -24,7 +26,17 @@ var LogMask;
     LogMask[LogMask["silly"] = 63] = "silly";
 })(LogMask = exports.LogMask || (exports.LogMask = {}));
 // log utils
-var lvlName = (process.env.log || process.env.LOG || "info").toLowerCase();
+var lvlName = (process.env.log || process.env.LOG || "info");
+var logDir, logFile;
+if (lvlName.indexOf(",")) {
+    var parts = lvlName.split(",");
+    lvlName = parts[0];
+    if (parts.length > 1) {
+        logDir = path.dirname(parts[1]);
+        logFile = path.basename(parts[1]);
+    }
+}
+lvlName = lvlName.toLowerCase();
 exports.mask = LogMask[lvlName];
 if (exports.mask == undefined)
     exports.mask = LogMask.info;
@@ -32,12 +44,22 @@ if (exports.mask == undefined)
 var logger = init(exports.mask);
 /** Initializes a logger. */
 function init(mask) {
+    var transport;
+    if (logDir && logFile)
+        transport = new rotate({
+            filename: logFile,
+            dirname: logDir,
+            datePattern: 'YYYY-MM-DD',
+            zippedArchive: true
+        });
+    else
+        transport = new winston.transports.Console({
+            format: getFormat(mask, process.env.NODE_ENV)
+        });
     return winston.createLogger({
         level: LogMask[mask],
         transports: [
-            new winston.transports.Console({
-                format: getFormat(mask, process.env.NODE_ENV)
-            })
+            transport
         ]
     });
 }

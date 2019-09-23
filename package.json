@@ -1,6 +1,6 @@
 {
   "name": "gulp-web-build",
-  "version": "3.1.13",
+  "version": "3.1.14",
   "description": "Util for building web applications.",
   "main": "./bin/js/index.js",
   "types": "./bin/dts/index.d.ts",
@@ -71,6 +71,7 @@
     "ts-node": "^8.4.1",
     "typescript": "^3.6.3",
     "vinyl": "^2.2.0",
-    "winston": "^3.2.1"
+    "winston": "^3.2.1",
+    "winston-daily-rotate-file": "^4.1.0"
   }
 }
