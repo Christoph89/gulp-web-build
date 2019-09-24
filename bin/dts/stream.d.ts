@@ -11,7 +11,7 @@ export declare class GulpStream {
     /** Return the source stream for the specified content. */
     static contentSrc(cfg: BuildConfig, content: any): GulpStream;
     /** Pipes the current stream to the specified desination stream. */
-    pipe<T extends NodeJS.WritableStream>(destination: T): GulpStream;
+    pipe<T extends NodeJS.WritableStream>(destination: T, minify?: any): GulpStream;
     /** Sets the destination for the current stream. */
-    dest(path: string | string[] | DestinationMap): NodeJS.ReadWriteStream;
+    dest(path: string | string[] | DestinationMap, preDestPipe?: any): NodeJS.ReadWriteStream;
 }

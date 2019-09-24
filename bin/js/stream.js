@@ -7,6 +7,7 @@ var concat = require("gulp-concat");
 var multiDest = require("gulp-multi-dest");
 var file = require("gulp-file");
 var data = require("gulp-data");
+var empty = require("gulp-empty");
 var util_1 = require("./util");
 var index_1 = require("./index");
 var log = require("./log");
@@ -33,14 +34,14 @@ var GulpStream = /** @class */ (function () {
         return new GulpStream(cfg, str ? file("src", str, { src: true }, { contentSrc: content }) : null);
     };
     /** Pipes the current stream to the specified desination stream. */
-    GulpStream.prototype.pipe = function (destination) {
+    GulpStream.prototype.pipe = function (destination, minify) {
         if (!this.stream)
             return this;
         var output = this.stream.pipe(destination);
         return new GulpStream(this.cfg, output, this.stream.meta);
     };
     /** Sets the destination for the current stream. */
-    GulpStream.prototype.dest = function (path) {
+    GulpStream.prototype.dest = function (path, preDestPipe) {
         if (!this.stream) {
             log.verbose("empty dest stream for", path);
             return null;
@@ -60,9 +61,9 @@ var GulpStream = /** @class */ (function () {
         if (typeof path == "string") {
             filename = pathutil.extname(path) ? pathutil.basename(path) : null;
             if (filename)
-                destStream = this.stream.pipe(concat(filename)).pipe(gulp.dest(pathutil.dirname(path)));
+                destStream = this.stream.pipe(concat(filename)).pipe(preDestPipe || empty()).pipe(gulp.dest(pathutil.dirname(path)));
             else
-                destStream = this.stream.pipe(gulp.dest(path));
+                destStream = this.stream.pipe(preDestPipe || empty()).pipe(gulp.dest(path));
         }
         else {
             var paths = linq.from(path).select(function (p) {
@@ -73,9 +74,9 @@ var GulpStream = /** @class */ (function () {
             }).toArray();
             // @@todo multiDest calls finish before files are copied
             if (filename)
-                destStream = this.stream.pipe(concat(filename)).pipe(multiDest(paths));
+                destStream = this.stream.pipe(concat(filename)).pipe(preDestPipe || empty()).pipe(multiDest(paths));
             else
-                destStream = this.stream.pipe(multiDest(paths));
+                destStream = this.stream.pipe(preDestPipe || empty).pipe(multiDest(paths));
         }
         // add meta to dest stream
         destStream.meta = this.stream.meta;

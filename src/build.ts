@@ -364,6 +364,8 @@ export class Build
 
   private copyStatic(content: StaticContent)
   {
+    if (this.cfg.minify && (typeof content.src=="string" && pathutil.extname(content.src)==".js" || linq.from(content.src).all(x => pathutil.extname(x)==".js")))
+      return this.extStream(this.util.src(content.src).dest(content.dest, this.minifyJs()), "copy", content);
     return this.extStream(this.util.copy(content.src, content.dest), "copy", content);
   }
 

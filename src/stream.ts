@@ -5,6 +5,7 @@ import * as concat from "gulp-concat";
 import * as multiDest from "gulp-multi-dest";
 import * as file from "gulp-file";
 import * as data from "gulp-data";
+import * as empty from "gulp-empty";
 import { BuildConfig, DestinationMap, ReadWriteStreamExt, BuildCallback } from "./def";
 import { BuildUtil } from "./util";
 import { merge } from "./index";
@@ -41,7 +42,7 @@ export class GulpStream
   }
 
   /** Pipes the current stream to the specified desination stream. */
-  public pipe<T extends NodeJS.WritableStream>(destination: T): GulpStream
+  public pipe<T extends NodeJS.WritableStream>(destination: T, minify?: any): GulpStream
   {
     if (!this.stream)
       return this;
@@ -50,7 +51,7 @@ export class GulpStream
   }
 
   /** Sets the destination for the current stream. */
-  public dest(path: string|string[]|DestinationMap): NodeJS.ReadWriteStream
+  public dest(path: string|string[]|DestinationMap, preDestPipe?: any): NodeJS.ReadWriteStream
   {
     if (!this.stream)
     {
@@ -77,9 +78,9 @@ export class GulpStream
     {
       filename=pathutil.extname(path)?pathutil.basename(path):null;
       if (filename)
-        destStream=this.stream.pipe(concat(filename)).pipe(gulp.dest(pathutil.dirname(path)));
+        destStream=this.stream.pipe(concat(filename)).pipe(preDestPipe||empty()).pipe(gulp.dest(pathutil.dirname(path)));
       else
-        destStream=this.stream.pipe(gulp.dest(path));
+        destStream=this.stream.pipe(preDestPipe||empty()).pipe(gulp.dest(path));
     }
     else
     {
@@ -93,9 +94,9 @@ export class GulpStream
 
       // @@todo multiDest calls finish before files are copied
       if (filename)
-        destStream=this.stream.pipe(concat(filename)).pipe(multiDest(paths));
+        destStream=this.stream.pipe(concat(filename)).pipe(preDestPipe||empty()).pipe(multiDest(paths));
       else
-        destStream=this.stream.pipe(multiDest(paths));
+        destStream=this.stream.pipe(preDestPipe||empty).pipe(multiDest(paths));
     }
 
     // add meta to dest stream
