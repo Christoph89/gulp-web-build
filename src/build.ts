@@ -420,19 +420,7 @@ export class Build
     return this.extStream(this.util.src(content.src)
       .pipe(tpldata(getData))
       .pipe(tplrender({ path: input }))
-      .dest(content.dest), "render tpl", content, (clb) => {
-        // wait finish task until tpl has been rendered
-        var wait=setInterval(() => 
-        {
-          if (linq.from(files).all(f => fs.existsSync(f)))
-          {
-            clb();
-            clearInterval(wait);
-          }
-          else
-            log.silly("Wait for tpl output");
-        }, 100);
-      });
+      .dest(content.dest, this.minifyHtml()), "render tpl", content);
   }
 
   private extendSourcemapOpts(opts: SourcemapOptions, src: string, dest: string): SourcemapOptions

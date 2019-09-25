@@ -326,17 +326,7 @@ var Build = /** @class */ (function () {
         return this.extStream(this.util.src(content.src)
             .pipe(tpldata(getData))
             .pipe(tplrender({ path: input }))
-            .dest(content.dest), "render tpl", content, function (clb) {
-            // wait finish task until tpl has been rendered
-            var wait = setInterval(function () {
-                if (linq.from(files).all(function (f) { return fs.existsSync(f); })) {
-                    clb();
-                    clearInterval(wait);
-                }
-                else
-                    log.silly("Wait for tpl output");
-            }, 100);
-        });
+            .dest(content.dest, this.minifyHtml()), "render tpl", content);
     };
     Build.prototype.extendSourcemapOpts = function (opts, src, dest) {
         if (!src || !dest)
