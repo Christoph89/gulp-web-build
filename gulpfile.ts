@@ -33,7 +33,7 @@ $.task("build", "fix-gulp-merge-json", function build_fn (cb) {;
 /** Cleans the project. */
 $.task("clean", function clean_fn (cb) {
   new $.Clean()
-    .delVSCodeExcludes("node_modules")
+    .delVSCodeExcludes("node_modules", "package-lock.json")
     .del("./bin")
     .run(cb);
 });
