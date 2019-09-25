@@ -10,6 +10,7 @@ var sass = require("gulp-sass");
 var javac = require("gulp-javac");
 var uglify = require("gulp-uglify");
 var uglifycss = require("gulp-uglifycss");
+var minifyHtml = require("gulp-htmlmin");
 var typescript = require("gulp-typescript");
 var sourcemaps = require("gulp-sourcemaps");
 var jmerge = require("gulp-merge-json");
@@ -283,9 +284,29 @@ var Build = /** @class */ (function () {
         return source;
     };
     Build.prototype.copyStatic = function (content) {
-        if (this.cfg.minify && (typeof content.src == "string" && pathutil.extname(content.src) == ".js" || linq.from(content.src).all(function (x) { return pathutil.extname(x) == ".js"; })))
-            return this.extStream(this.util.src(content.src).dest(content.dest, this.minifyJs()), "copy", content);
-        return this.extStream(this.util.copy(content.src, content.dest), "copy", content);
+        var logText = "copy";
+        var minify;
+        // check for minify js, css or html
+        if (this.cfg.minify) {
+            if (minify = this.checkMinifiedCopy(content, [".js"], this.minifyJs))
+                logText += " and minify js";
+            else if (minify = this.checkMinifiedCopy(content, [".css"], this.minifyCss))
+                logText += " and minify css";
+            else if (minify = this.checkMinifiedCopy(content, [".html", ".htm"], this.minifyHtml))
+                logText += " and minify html";
+        }
+        // copy
+        return this.extStream(this.util.src(content.src).dest(content.dest, minify), logText, content);
+    };
+    Build.prototype.checkMinifiedCopy = function (content, extensions, minify) {
+        if (typeof content.src == "string") {
+            var ext = pathutil.extname(content.src);
+            if (linq.from(extensions).any(function (x) { return x == ext; }))
+                return minify.call(this);
+        }
+        else if (linq.from(content.src).select(function (x) { return pathutil.extname(x); }).all(function (x) { return linq.from(extensions).any(function (e) { return e == x; }); }))
+            return minify.call(this);
+        return null;
     };
     Build.prototype.writeFile = function (content) {
         if (typeof content.content == "function")
@@ -337,13 +358,26 @@ var Build = /** @class */ (function () {
     };
     Build.prototype.minifyJs = function () {
         if (this.cfg.minify)
-            return uglify({});
+            return uglify(index_1.merge({
+            // default options
+            }, this.cfg.minifyJs || {}));
         return empty();
     };
     Build.prototype.minifyCss = function () {
         if (this.cfg.minify)
-            return uglifycss({});
+            return uglifycss(index_1.merge({
+            // default options
+            }, this.cfg.minifyCss || {}));
         return empty();
+    };
+    Build.prototype.minifyHtml = function () {
+        if (this.cfg.minify)
+            return minifyHtml(index_1.merge({
+                // default options
+                collapseWhitespace: true,
+                minifyJS: true,
+                minifyCSS: true
+            }, this.cfg.minifyHtml));
     };
     Build.prototype.sourcemapsInit = function (opt) {
         if (this.cfg.sourcemaps && opt)

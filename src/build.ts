@@ -9,6 +9,10 @@ import * as sass from "gulp-sass";
 import * as javac from "gulp-javac";
 import * as uglify from "gulp-uglify";
 import * as uglifycss from "gulp-uglifycss";
+import * as minifyHtml from "gulp-htmlmin";
+import { Options as MinifyJsOptions } from "gulp-uglify";
+import { UglifyCSSOptions as MinifyCssOptions } from "uglifycss";
+import { Options as MinifyHtmlOptions }from "html-minifier";
 import * as typescript from "gulp-typescript";
 import * as sourcemaps from "gulp-sourcemaps";
 import * as jmerge from "gulp-merge-json";
@@ -364,9 +368,34 @@ export class Build
 
   private copyStatic(content: StaticContent)
   {
-    if (this.cfg.minify && (typeof content.src=="string" && pathutil.extname(content.src)==".js" || linq.from(content.src).all(x => pathutil.extname(x)==".js")))
-      return this.extStream(this.util.src(content.src).dest(content.dest, this.minifyJs()), "copy", content);
-    return this.extStream(this.util.copy(content.src, content.dest), "copy", content);
+    var logText="copy";
+    var minify: any;
+
+    // check for minify js, css or html
+    if (this.cfg.minify)
+    {
+      if (minify=this.checkMinifiedCopy(content, [".js"], this.minifyJs))
+        logText+=" and minify js";
+      else if (minify=this.checkMinifiedCopy(content, [".css"], this.minifyCss))
+        logText+=" and minify css";
+      else if (minify=this.checkMinifiedCopy(content, [".html", ".htm"], this.minifyHtml))
+        logText+=" and minify html";
+    }
+    // copy
+    return this.extStream(this.util.src(content.src).dest(content.dest, minify), logText, content);
+  }
+
+  private checkMinifiedCopy(content: StaticContent, extensions: string[], minify: () => any): any
+  {
+    if (typeof content.src=="string")
+    {
+      var ext=pathutil.extname(content.src);
+      if (linq.from(extensions).any(x => x==ext))
+        return minify.call(this);
+    }
+    else if (linq.from(content.src).select(x => pathutil.extname(x)).all(x => linq.from(extensions).any(e => e==x)))
+      return minify.call(this);
+    return null;
   }
 
   private writeFile(content: FileContent)
@@ -430,15 +459,30 @@ export class Build
   private minifyJs()
   {
     if (this.cfg.minify)
-      return uglify({});
+      return uglify(merge(<MinifyJsOptions>{
+        // default options
+      }, this.cfg.minifyJs||{}));
     return empty();
   }
 
   private minifyCss()
   {
     if (this.cfg.minify)
-      return uglifycss({});
+      return uglifycss(merge(<MinifyCssOptions>{
+        // default options
+      }, this.cfg.minifyCss||{}));
     return empty();
+  }
+
+  private minifyHtml()
+  {
+    if (this.cfg.minify)
+      return minifyHtml(merge(<MinifyHtmlOptions>{ 
+        // default options
+        collapseWhitespace: true,
+        minifyJS: true,
+        minifyCSS: true,
+      }, this.cfg.minifyHtml));
   }
 
   private sourcemapsInit(opt: SourcemapOptions)

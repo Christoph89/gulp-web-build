@@ -59,12 +59,14 @@ export declare class Build {
     private createStream;
     private extStream;
     private copyStatic;
+    private checkMinifiedCopy;
     private writeFile;
     private renderTpl;
     private extendSourcemapOpts;
     private resolveClassPath;
     private minifyJs;
     private minifyCss;
+    private minifyHtml;
     private sourcemapsInit;
     private sourcemapsWrite;
     private dir;

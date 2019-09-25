@@ -1,6 +1,9 @@
 /// <reference types="node" />
 import * as ts from "gulp-typescript";
 import * as sourcemaps from "gulp-sourcemaps";
+import { Options as MinifyJsOptions } from "gulp-uglify";
+import { UglifyCSSOptions as MinifyCssOptions } from "uglifycss";
+import { Options as MinifyHtmlOptions } from "html-minifier";
 import { TaskFunction } from "undertaker";
 import { Build } from ".";
 /** Config for building web applications. */
@@ -9,6 +12,12 @@ export interface BuildConfig {
     prj?: string;
     /** Specifies whether to minify js/css output. */
     minify?: boolean;
+    /** Specifies option for js minification. */
+    minifyJs?: MinifyJsOptions;
+    /** Specifies options for css minification. */
+    minifyCss?: MinifyCssOptions;
+    /** Specifies options for html minification. */
+    minifyHtml?: MinifyHtmlOptions;
     /** Specifies whether to create sourcemaps for js/css. */
     sourcemaps?: boolean;
     /** Specifies typescript compiler options. */
