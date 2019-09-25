@@ -299,13 +299,17 @@ var Build = /** @class */ (function () {
         return this.extStream(this.util.src(content.src).dest(content.dest, minify), logText, content);
     };
     Build.prototype.checkMinifiedCopy = function (content, extensions, minify) {
-        if (typeof content.src == "string") {
-            var ext = pathutil.extname(content.src);
+        if (typeof content == "string") {
+            var ext = pathutil.extname(content);
             if (linq.from(extensions).any(function (x) { return x == ext; }))
                 return minify.call(this);
         }
-        else if (linq.from(content.src).select(function (x) { return pathutil.extname(x); }).all(function (x) { return linq.from(extensions).any(function (e) { return e == x; }); }))
-            return minify.call(this);
+        else if (Array.isArray(content)) {
+            if (linq.from(content).select(function (x) { return pathutil.extname(x); }).all(function (x) { return linq.from(extensions).any(function (e) { return e == x; }); }))
+                return minify.call(this);
+        }
+        else
+            return this.checkMinifiedCopy(content.src, extensions, minify) || this.checkMinifiedCopy(content.dest, extensions, minify);
         return null;
     };
     Build.prototype.writeFile = function (content) {

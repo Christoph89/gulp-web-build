@@ -385,16 +385,21 @@ export class Build
     return this.extStream(this.util.src(content.src).dest(content.dest, minify), logText, content);
   }
 
-  private checkMinifiedCopy(content: StaticContent, extensions: string[], minify: () => any): any
+  private checkMinifiedCopy(content: StaticContent|string|string[], extensions: string[], minify: () => any): any
   {
-    if (typeof content.src=="string")
+    if (typeof content=="string")
     {
-      var ext=pathutil.extname(content.src);
+      var ext=pathutil.extname(content);
       if (linq.from(extensions).any(x => x==ext))
         return minify.call(this);
     }
-    else if (linq.from(content.src).select(x => pathutil.extname(x)).all(x => linq.from(extensions).any(e => e==x)))
-      return minify.call(this);
+    else if (Array.isArray(content)) 
+    {
+      if (linq.from(content).select(x => pathutil.extname(x)).all(x => linq.from(extensions).any(e => e==x)))
+        return minify.call(this);
+    }
+    else
+      return this.checkMinifiedCopy(content.src, extensions, minify) || this.checkMinifiedCopy(content.dest, extensions, minify);
     return null;
   }
 
