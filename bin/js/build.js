@@ -365,7 +365,7 @@ var Build = /** @class */ (function () {
         return empty();
     };
     Build.prototype.minifyHtml = function () {
-        if (this.cfg.minify)
+        if (this.cfg.minify && this.cfg.minifyHtml !== false)
             return minifyHtml(index_1.merge({
                 // default options
                 collapseWhitespace: true,

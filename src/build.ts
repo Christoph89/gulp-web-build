@@ -469,7 +469,7 @@ export class Build
 
   private minifyHtml()
   {
-    if (this.cfg.minify)
+    if (this.cfg.minify && this.cfg.minifyHtml!==false)
       return minifyHtml(merge(<MinifyHtmlOptions>{ 
         // default options
         collapseWhitespace: true,
