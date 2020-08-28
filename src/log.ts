@@ -30,7 +30,7 @@ export enum LogMask
 }
 
 // log utils
-var lvlName=(process.env.log || process.env.LOG || "info");
+var lvlName=(process.env.log || process.env.LOG || "info").trim();
 var logDir, logFile;
 if (lvlName.indexOf(","))
 {
@@ -43,6 +43,7 @@ if (lvlName.indexOf(","))
   }
 }
 lvlName=lvlName.toLowerCase();
+process.env.LOG=lvlName;
 export var mask: LogMask=LogMask[lvlName];
 if (mask==undefined) mask=LogMask.info;
 
@@ -58,11 +59,12 @@ function init(mask: LogMask): winston.Logger
       filename: logFile,
       dirname: logDir,
       datePattern: 'YYYY-MM-DD',
-      zippedArchive: true
+      zippedArchive: true,
+      format: getFormat(mask, "production")
     });
   else
     transport=new winston.transports.Console({
-      format: getFormat(mask, process.env.NODE_ENV),
+      format: getFormat(mask, (process.env.NODE_ENV||"").trim()),
     });
 
   return winston.createLogger({
@@ -77,7 +79,7 @@ function init(mask: LogMask): winston.Logger
 function getFormat(mask: LogMask, env: string)
 {
   var formats=[];
-  formats.push(winston.format.timestamp({ format: mask==LogMask.debug||mask==LogMask.silly||env=="production"?null:"hh:mm:ss" }));
+  formats.push(winston.format.timestamp({ format: "YYYY-MM-DD hh:mm:ss" }));
   formats.push(winston.format.printf(env=="production"?formatLogMsg:formatLogMsgColored));
   return winston.format.combine(...formats);
 }
